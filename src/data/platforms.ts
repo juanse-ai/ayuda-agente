@@ -10,6 +10,12 @@ interface PlatformMeta {
      * Y sí, `X.svg.webp` es un WebP pese al nombre del archivo.
      */
     logo: string
+    /**
+     * Cómo se llama la respuesta simulada hacia esta red en el chat de
+     * Conexiones ("Comentario en TikTok", "DM en Instagram"…). Solo texto de
+     * demostración: la app nunca publica nada real en ninguna plataforma.
+     */
+    replyAction: string
 }
 
 /**
@@ -20,8 +26,8 @@ interface PlatformMeta {
  * entrada y un archivo, sin tocar ningún componente.
  */
 export const PLATFORMS: Record<SocialPlatform, PlatformMeta> = {
-    instagram: { label: 'Instagram', logo: '/logos/Instagram.png' },
-    x: { label: 'X', logo: '/logos/X.svg.webp' },
-    facebook: { label: 'Facebook', logo: '/logos/Facebook.webp' },
-    tiktok: { label: 'TikTok', logo: '/logos/TikTok.jpg' }
+    instagram: { label: 'Instagram', logo: '/logos/Instagram.png', replyAction: 'DM en Instagram' },
+    x: { label: 'X', logo: '/logos/X.svg.webp', replyAction: 'Respuesta en X' },
+    facebook: { label: 'Facebook', logo: '/logos/Facebook.webp', replyAction: 'Mensaje en Facebook' },
+    tiktok: { label: 'TikTok', logo: '/logos/TikTok.jpg', replyAction: 'Comentario en TikTok' }
 }

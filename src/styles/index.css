@@ -183,3 +183,25 @@ body {
         0 0 0 10px color-mix(in srgb, var(--marker-color) 25%, transparent);
     transform: scale(1.1);
 }
+
+/* ==========================================================================
+   Grafo de conexiones
+   Anillo pulsante del "spotlight" que el chat activa sobre un punto. Vive en
+   CSS plano porque anima la propiedad de geometría `r` de un <circle> SVG,
+   que Tailwind no cubre con utilidades.
+   ========================================================================== */
+
+@keyframes conexiones-pulse {
+    from {
+        r: 10;
+        opacity: 0.9;
+    }
+    to {
+        r: 26;
+        opacity: 0;
+    }
+}
+
+.conexiones-pulse {
+    animation: conexiones-pulse 1.6s ease-out infinite;
+}

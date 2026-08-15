@@ -3,22 +3,23 @@ import type { SocialPost } from '@/types/place'
 
 interface SocialPostCardProps {
     post: SocialPost
+    /**
+     * Si viene, la tarjeta se vuelve un botón (Conexiones la usa para
+     * prellenar la respuesta en el chat). Sin él, la tarjeta no es interactiva
+     * a propósito: en el mapa los datos son ficticios y no hay URL real que
+     * abrir, así que tabular por el panel no atraviesa paradas muertas.
+     */
+    onSelect?: () => void
 }
 
-/**
- * Una publicación de la lista.
- *
- * No enlaza a ninguna parte: los datos son ficticios y no hay URL real que
- * abrir. La tarjeta no es interactiva a propósito, así que tabular por el panel
- * no atraviesa decenas de paradas muertas.
- */
-export function SocialPostCard({ post }: SocialPostCardProps) {
+/** Una publicación de la lista. */
+export function SocialPostCard({ post, onSelect }: SocialPostCardProps) {
     const platform = PLATFORMS[post.platform]
 
-    return (
-        <li className="border-line bg-page rounded-lg border p-3.5">
+    const content = (
+        <>
             <div className="flex items-center gap-2.5">
-                {/* Marco común para los tres logos. Son mapas de bits con fondo
+                {/* Marco común para los logos. Son mapas de bits con fondo
                     propio —el de X es un disco negro— y no se pueden recolorear
                     con CSS, así que la coherencia la da el marco: mismo tamaño,
                     mismo borde, mismo aire. Nada de máscara circular: recortaría
@@ -42,6 +43,25 @@ export function SocialPostCard({ post }: SocialPostCardProps) {
                 </div>
             </div>
             <p className="text-fg-muted mt-3 text-sm leading-relaxed">{post.content}</p>
+        </>
+    )
+
+    if (onSelect === undefined) {
+        return <li className="border-line bg-page rounded-lg border p-3.5">{content}</li>
+    }
+
+    // Botón dentro del <li>, nunca un <li> clicable: el elemento de lista
+    // conserva su semántica y el botón aporta foco y teclado gratis.
+    return (
+        <li>
+            <button
+                type="button"
+                onClick={onSelect}
+                className="border-line bg-page hover:border-brand/60 block w-full rounded-lg border p-3.5 text-left transition-colors duration-200"
+            >
+                {content}
+                <span className="text-brand mt-2 block text-xs font-medium">Responder →</span>
+            </button>
         </li>
     )
 }

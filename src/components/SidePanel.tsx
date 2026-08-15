@@ -2,11 +2,13 @@ import { X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { SocialPostCard } from '@/components/SocialPostCard'
 import { cn } from '@/lib/utils'
-import type { Place } from '@/types/place'
+import type { Place, SocialPost } from '@/types/place'
 
 interface SidePanelProps {
     place: Place | null
     onClose: () => void
+    /** Si viene, cada publicación se vuelve clicable (lo usa Conexiones). */
+    onSelectPost?: (post: SocialPost) => void
 }
 
 /**
@@ -14,7 +16,7 @@ interface SidePanelProps {
  * close, and knows nothing about Leaflet. It sits outside the map container,
  * so clicks inside it never reach the map.
  */
-export function SidePanel({ place, onClose }: SidePanelProps) {
+export function SidePanel({ place, onClose, onSelectPost }: SidePanelProps) {
     const isOpen = place !== null
 
     // Keep the last place on screen while the panel slides out, so the content
@@ -98,7 +100,11 @@ export function SidePanel({ place, onClose }: SidePanelProps) {
                                 semántica de lista sin él. */}
                             <ul role="list" className="flex flex-col gap-2.5">
                                 {lastPlace.posts.map((post) => (
-                                    <SocialPostCard key={post.id} post={post} />
+                                    <SocialPostCard
+                                        key={post.id}
+                                        post={post}
+                                        onSelect={onSelectPost ? () => onSelectPost(post) : undefined}
+                                    />
                                 ))}
                             </ul>
                         </section>
