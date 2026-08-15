@@ -1,9 +1,9 @@
 import { useRef, useState } from 'react'
-import { ConnectionChat } from '@/components/connections/ConnectionChat'
+import { ChatBar } from '@/components/ChatBar'
 import { ConnectionsGraph } from '@/components/connections/ConnectionsGraph'
 import { ConnectionsLegend } from '@/components/connections/ConnectionsLegend'
 import { SidePanel } from '@/components/SidePanel'
-import { CONNECTIONS, GRAPH_LAYOUT, matchScenario } from '@/data/connections'
+import { CHAT_FALLBACK, CONNECTIONS, GRAPH_LAYOUT, matchScenario } from '@/data/connections'
 import { PLACES } from '@/data/places'
 import { PLATFORMS } from '@/data/platforms'
 import type { ChatMessage } from '@/types/connection'
@@ -140,10 +140,7 @@ export function ConnectionsView() {
             {
                 id: nextMessageId(),
                 from: 'agent',
-                text:
-                    scenario !== null
-                        ? scenario.response
-                        : 'Por ahora solo entiendo algunas peticiones de esta demo. Prueba con "agua", "ropa" o "derrumbe".'
+                text: scenario !== null ? scenario.response : CHAT_FALLBACK
             }
         ])
         setDraft('')
@@ -169,7 +166,7 @@ export function ConnectionsView() {
                 onClearSelection={handleClearSelection}
             />
             <ConnectionsLegend />
-            <ConnectionChat
+            <ChatBar
                 messages={messages}
                 draft={draft}
                 onDraftChange={handleDraftChange}

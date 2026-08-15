@@ -4,8 +4,9 @@ Interfaz de mapa oscura construida con React 19, Vite, TypeScript, Tailwind CSS 
 
 La cabecera expone dos pestañas. **Mapa** es el escenario principal: al hacer clic en una ubicación
 se abre un panel lateral superpuesto con su detalle. **Conexiones** muestra un grafo flotante que
-empareja puntos que necesitan ayuda con puntos que la ofrecen, con un chat de demostración en la
-parte inferior.
+empareja puntos que necesitan ayuda con puntos que la ofrecen. Ambas pestañas llevan un chat de
+demostración en la parte inferior: en Mapa vuela la cámara al punto que coincide con la petición;
+en Conexiones hace zoom sobre el grafo.
 
 ## Comandos
 
@@ -24,8 +25,11 @@ src/
 ├── App.tsx                    Raíz de composición: pestaña activa + ciudad enfocada + punto seleccionado
 ├── components/
 │   ├── AppHeader.tsx          Barra superior con las pestañas Mapa / Conexiones
+│   ├── ChatBar.tsx            Barra de chat de demostración compartida por las dos pestañas
 │   ├── LocationMenu.tsx       Desplegable de ciudades
+│   ├── MapAssistant.tsx       El chat de la pestaña Mapa (matching → volar al punto)
 │   ├── MapFocus.tsx           Vuela la cámara a la ciudad enfocada
+│   ├── MapSpotlight.tsx       Vuela la cámara al punto que encontró el chat
 │   ├── MapStage.tsx           MapContainer + capa de teselas + marcadores
 │   ├── PlaceMarker.tsx        Un punto → un marcador de Leaflet
 │   ├── SidePanel.tsx          Panel lateral superpuesto
@@ -33,8 +37,7 @@ src/
 │   └── connections/
 │       ├── ConnectionsView.tsx   La vista Conexiones completa (todo su estado vive aquí)
 │       ├── ConnectionsGraph.tsx  Grafo SVG: puntos a la deriva, hilos y spotlight
-│       ├── ConnectionsLegend.tsx Leyenda de colores del grafo
-│       └── ConnectionChat.tsx    Barra de chat de demostración
+│       └── ConnectionsLegend.tsx Leyenda de colores del grafo
 ├── data/
 │   ├── places.ts              CIUDADES y PUNTOS de ejemplo (datos ficticios)
 │   ├── connections.ts         Emparejamientos, posiciones del grafo y escenarios del chat (ficticios)

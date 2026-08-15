@@ -1,5 +1,6 @@
 import { AttributionControl, MapContainer, TileLayer, ZoomControl } from 'react-leaflet'
 import { MapFocus } from '@/components/MapFocus'
+import { MapSpotlight } from '@/components/MapSpotlight'
 import { PlaceMarker } from '@/components/PlaceMarker'
 import { MAP_CENTER, MAP_ZOOM } from '@/data/places'
 import type { City, Place } from '@/types/place'
@@ -12,6 +13,8 @@ interface MapStageProps {
     places: Place[]
     selectedId: string | null
     focusedCity: City | null
+    /** Punto encontrado por el chat del mapa; ver MapSpotlight sobre su identidad. */
+    spotlight?: { place: Place } | null
     onSelectPlace: (placeId: string) => void
 }
 
@@ -19,7 +22,13 @@ interface MapStageProps {
  * The map itself. Reports which place was clicked; knows nothing about what
  * consumes that selection.
  */
-export function MapStage({ places, selectedId, focusedCity, onSelectPlace }: MapStageProps) {
+export function MapStage({
+    places,
+    selectedId,
+    focusedCity,
+    spotlight = null,
+    onSelectPlace
+}: MapStageProps) {
     return (
         <MapContainer
             center={MAP_CENTER}
@@ -35,6 +44,7 @@ export function MapStage({ places, selectedId, focusedCity, onSelectPlace }: Map
             <ZoomControl position="bottomleft" />
             <AttributionControl position="bottomleft" prefix={false} />
             <MapFocus city={focusedCity} />
+            <MapSpotlight target={spotlight} />
             {places.map((place) => (
                 <PlaceMarker
                     key={place.id}

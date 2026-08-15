@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils'
 import type { Ref } from 'react'
 import type { ChatMessage } from '@/types/connection'
 
-interface ConnectionChatProps {
+interface ChatBarProps {
     messages: ChatMessage[]
     draft: string
     onDraftChange: (value: string) => void
@@ -14,11 +14,18 @@ interface ConnectionChatProps {
 }
 
 /**
- * Barra de chat de Conexiones. Presentational: pinta burbujas y reporta el
- * borrador y el envío; toda la "inteligencia" (que no la hay: es una maqueta)
- * vive en ConnectionsView. Nunca llama a ninguna red ni API.
+ * Barra de chat compartida por Mapa y Conexiones. Presentational: pinta
+ * burbujas y reporta el borrador y el envío; toda la "inteligencia" (que no la
+ * hay: es una maqueta) vive en la vista que la usa. Nunca llama a ninguna red
+ * ni API.
+ *
+ * `z-[1100]` porque sobre el mapa debe pintarse encima de los controles de
+ * Leaflet (z 1000) y debajo del panel lateral (z 1200); en Conexiones cualquier
+ * z bajo serviría, pero uno solo vale para ambos. El degradado de fondo es
+ * `pointer-events-none` para no bloquear el mapa (ni el fondo del grafo) fuera
+ * de la columna interactiva.
  */
-export function ConnectionChat({ messages, draft, onDraftChange, onSend, inputRef }: ConnectionChatProps) {
+export function ChatBar({ messages, draft, onDraftChange, onSend, inputRef }: ChatBarProps) {
     // Centinela al final de la lista: al llegar una burbuja nueva, el scroll
     // baja solo. `block: 'nearest'` evita que arrastre el resto de la página.
     const endRef = useRef<HTMLDivElement>(null)
@@ -27,8 +34,8 @@ export function ConnectionChat({ messages, draft, onDraftChange, onSend, inputRe
     }, [messages])
 
     return (
-        <div className="from-page via-page/80 absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t to-transparent px-4 pt-10 pb-4">
-            <div className="mx-auto flex w-full max-w-3xl flex-col gap-3">
+        <div className="from-page via-page/80 pointer-events-none absolute inset-x-0 bottom-0 z-[1100] bg-gradient-to-t to-transparent px-4 pt-10 pb-4">
+            <div className="pointer-events-auto mx-auto flex w-full max-w-3xl flex-col gap-3">
                 <div
                     role="log"
                     aria-label="Conversación"

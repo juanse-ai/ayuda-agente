@@ -111,6 +111,13 @@ body {
     color: var(--color-fg-faint);
 }
 
+/* Los controles inferiores deben pintarse por encima del degradado del chat
+   del mapa (z 1100) para que la atribución —obligatoria— siga legible y el
+   zoom siga clicable. Leaflet los trae a z-index 1000. */
+.leaflet-container .leaflet-bottom {
+    z-index: 1150;
+}
+
 /* Attribution — sits bottom-left under the zoom control, so it reads as a pill */
 .leaflet-container .leaflet-control-attribution {
     background: color-mix(in srgb, var(--color-page) 80%, transparent);

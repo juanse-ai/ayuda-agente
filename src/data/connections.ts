@@ -78,6 +78,10 @@ export const CHAT_SCENARIOS: ChatScenario[] = [
     }
 ]
 
+/** Disculpa común de los dos chats (Mapa y Conexiones) cuando nada coincide. */
+export const CHAT_FALLBACK =
+    'Por ahora solo entiendo algunas peticiones de esta demo. Prueba con "agua", "ropa" o "derrumbe".'
+
 /**
  * "Comprensión" de lenguaje de la demo: minúsculas, sin tildes, y basta con
  * que aparezca una palabra clave. Devuelve null si ningún escenario aplica —

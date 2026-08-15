@@ -35,6 +35,13 @@ export const MAP_ZOOM = 8
  */
 export const CITY_ZOOM = 12
 
+/**
+ * Zoom al volar hacia un punto concreto (lo usa el chat del mapa). Más cerca
+ * que CITY_ZOOM: aquí el objetivo es un solo punto, no separar los de una
+ * ciudad.
+ */
+export const PLACE_ZOOM = 15
+
 /** Alimenta el menú del header. Exactamente estas cuatro, en este orden. */
 export const CITIES: City[] = [
     { id: 'pereira', name: 'Pereira', department: 'Risaralda', position: [4.8143, -75.6946] },
