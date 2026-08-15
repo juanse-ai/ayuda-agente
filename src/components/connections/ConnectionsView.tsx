@@ -10,9 +10,10 @@ import type { ChatMessage } from '@/types/connection'
 import type { Place, SocialPlatform, SocialPost } from '@/types/place'
 
 /**
- * Un clic resalta el punto y sus emparejados; el segundo clic sobre el mismo
- * punto abre el panel. La unión discriminada hace imposible "panel abierto sin
- * punto": no hay estados a medias que sincronizar.
+ * Un solo clic resalta el punto y sus emparejados y abre su panel a la vez.
+ * `highlighted` existe para después de cerrar el panel: el resaltado se
+ * conserva hasta que un clic en el fondo lo despeja. La unión discriminada
+ * hace imposible "panel abierto sin punto": no hay estados a medias.
  */
 type Selection =
     { status: 'idle' } | { status: 'highlighted'; placeId: string } | { status: 'panel'; placeId: string }
@@ -68,15 +69,9 @@ export function ConnectionsView() {
 
     const handleDotClick = (placeId: string) => {
         setSpotlightId(null)
-        setSelection((prev) => {
-            if (prev.status === 'highlighted' && prev.placeId === placeId) {
-                return { status: 'panel', placeId }
-            }
-            if (prev.status === 'panel' && prev.placeId === placeId) {
-                return prev
-            }
-            return { status: 'highlighted', placeId }
-        })
+        setSelection((prev) =>
+            prev.status === 'panel' && prev.placeId === placeId ? prev : { status: 'panel', placeId }
+        )
     }
 
     const handleClearSelection = () => {

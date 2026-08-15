@@ -1,4 +1,4 @@
-import { Send } from 'lucide-react'
+import { ArrowUp } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 import { PLATFORMS } from '@/data/platforms'
 import { cn } from '@/lib/utils'
@@ -102,7 +102,7 @@ export function ChatBar({ messages, draft, onDraftChange, onSend, inputRef }: Ch
                         aria-label="Enviar"
                         className="bg-brand-strong text-fg grid size-9 shrink-0 place-items-center rounded-full transition-opacity duration-200 disabled:opacity-40"
                     >
-                        <Send size={16} strokeWidth={2} aria-hidden />
+                        <ArrowUp size={16} strokeWidth={2} aria-hidden />
                     </button>
                 </form>
             </div>
