@@ -3,8 +3,11 @@ import { AppHeader } from '@/components/AppHeader'
 import { MapStage } from '@/components/MapStage'
 import { SidePanel } from '@/components/SidePanel'
 import { CITIES, PLACES } from '@/data/places'
+import { useBackgroundMusic } from '@/lib/useBackgroundMusic'
 
 export default function App() {
+    useBackgroundMusic()
+
     // Dos ejes independientes: qué ciudad encuadra el mapa y qué punto está abierto.
     const [focusedCityId, setFocusedCityId] = useState<string | null>(null)
     const [selectedId, setSelectedId] = useState<string | null>(null)
