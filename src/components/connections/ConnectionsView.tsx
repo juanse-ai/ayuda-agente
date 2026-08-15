@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { ChatBar } from '@/components/ChatBar'
 import { ConnectionsGraph } from '@/components/connections/ConnectionsGraph'
-import { ConnectionsLegend } from '@/components/connections/ConnectionsLegend'
+import { HelpLegend } from '@/components/HelpLegend'
 import { SidePanel } from '@/components/SidePanel'
 import { CHAT_FALLBACK, CONNECTIONS, GRAPH_LAYOUT, matchScenario } from '@/data/connections'
 import { PLACES } from '@/data/places'
@@ -160,7 +160,7 @@ export function ConnectionsView() {
                 onSelectDot={handleDotClick}
                 onClearSelection={handleClearSelection}
             />
-            <ConnectionsLegend />
+            <HelpLegend showConnection />
             <ChatBar
                 messages={messages}
                 draft={draft}

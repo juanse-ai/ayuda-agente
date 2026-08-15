@@ -26,6 +26,7 @@ src/
 ├── components/
 │   ├── AppHeader.tsx          Barra superior con las pestañas Mapa / Conexiones
 │   ├── ChatBar.tsx            Barra de chat de demostración compartida por las dos pestañas
+│   ├── HelpLegend.tsx         Leyenda de colores compartida (fila de conexión solo en el grafo)
 │   ├── LocationMenu.tsx       Desplegable de ciudades
 │   ├── MapAssistant.tsx       El chat de la pestaña Mapa (matching → volar al punto)
 │   ├── MapFocus.tsx           Vuela la cámara a la ciudad enfocada
@@ -36,8 +37,7 @@ src/
 │   ├── SocialPostCard.tsx     Una publicación de una red social
 │   └── connections/
 │       ├── ConnectionsView.tsx   La vista Conexiones completa (todo su estado vive aquí)
-│       ├── ConnectionsGraph.tsx  Grafo SVG: puntos a la deriva, hilos y spotlight
-│       └── ConnectionsLegend.tsx Leyenda de colores del grafo
+│       └── ConnectionsGraph.tsx  Grafo SVG: puntos a la deriva, hilos y spotlight
 ├── data/
 │   ├── places.ts              CIUDADES y PUNTOS de ejemplo (datos ficticios)
 │   ├── connections.ts         Emparejamientos, posiciones del grafo y escenarios del chat (ficticios)

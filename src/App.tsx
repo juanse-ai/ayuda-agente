@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react'
 import { AppHeader, type AppTab } from '@/components/AppHeader'
 import { ConnectionsView } from '@/components/connections/ConnectionsView'
+import { HelpLegend } from '@/components/HelpLegend'
 import { MapAssistant } from '@/components/MapAssistant'
 import { MapStage } from '@/components/MapStage'
 import { SidePanel } from '@/components/SidePanel'
@@ -69,6 +70,8 @@ export default function App() {
                         spotlight={spotlight}
                         onSelectPlace={handleSelectPlace}
                     />
+                    {/* Sin la fila de "Conexión": en el mapa no hay hilos. */}
+                    <HelpLegend />
                     <MapAssistant onMatch={handleChatMatch} />
                     <SidePanel place={selectedPlace} onClose={handleClose} />
                 </div>
