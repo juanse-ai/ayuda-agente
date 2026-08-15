@@ -19,19 +19,28 @@ npm run format    # prettier --write .
 
 ```
 src/
-├── App.tsx                  Raíz de composición: mantiene la ubicación seleccionada
+├── App.tsx                    Raíz de composición: ciudad enfocada + punto seleccionado
 ├── components/
-│   ├── AppHeader.tsx        Barra superior
-│   ├── MapStage.tsx         MapContainer + capa de teselas + marcadores
-│   ├── PlaceMarker.tsx      Una ubicación → un marcador de Leaflet
-│   └── SidePanel.tsx        Panel lateral superpuesto
-├── data/places.ts           Datos de ejemplo (reemplazar por datos reales)
-├── lib/utils.ts             cn()
-├── styles/index.css         Tokens del tema, CSS de Leaflet y ajustes para modo oscuro
-└── types/place.ts           Tipo Place
+│   ├── AppHeader.tsx          Barra superior
+│   ├── LocationMenu.tsx       Desplegable de ciudades
+│   ├── MapFocus.tsx           Vuela la cámara a la ciudad enfocada
+│   ├── MapStage.tsx           MapContainer + capa de teselas + marcadores
+│   ├── PlaceMarker.tsx        Un punto → un marcador de Leaflet
+│   ├── SidePanel.tsx          Panel lateral superpuesto
+│   └── SocialPostCard.tsx     Una publicación de una red social
+├── data/
+│   ├── places.ts              CIUDADES y PUNTOS de ejemplo (datos ficticios)
+│   └── platforms.ts           Plataforma → etiqueta + ruta del logo
+├── lib/utils.ts               cn()
+├── styles/index.css           Tokens del tema, CSS de Leaflet y ajustes para modo oscuro
+└── types/place.ts             Place, City, SocialPost, SocialPlatform
 ```
 
-`MapStage` reporta qué ubicación se seleccionó pero no la almacena; `SidePanel` no conoce Leaflet.
+Dos entidades: **ciudades**, que alimentan el desplegable del header y el vuelo del mapa, y
+**puntos**, que son los reportes sobre el mapa. Cada punto tiene un título, una descripción y una
+lista de publicaciones de Instagram, X y Facebook.
+
+`MapStage` reporta qué punto se seleccionó pero no lo almacena; `SidePanel` no conoce Leaflet.
 `App` es lo único que conoce a ambos.
 
 ## Notas
@@ -41,5 +50,11 @@ src/
 - **Teselas:** CARTO `dark_all`, sin API key. La atribución de OpenStreetMap y CARTO es obligatoria.
 - **Marcadores:** se usa `divIcon` en lugar del icono por defecto de Leaflet, cuyos PNG no se
   resuelven bajo Vite.
-- **Datos:** `src/data/places.ts` contiene ubicaciones de ejemplo en Bogotá. Es el único archivo que
-  cambia al conectar datos reales.
+- **Datos:** `src/data/places.ts` contiene **datos ficticios** de demostración. Ver el aviso al
+  inicio del archivo. Es el único archivo que cambia al conectar datos reales.
+- **Logos:** viven en `public/logos/` y son mapas de bits sin posibilidad de recolorear. Se muestran
+  dentro de un marco común porque el de X es un disco negro que, suelto, se pierde sobre el fondo
+  oscuro. `src/data/platforms.ts` es el único punto que conoce sus rutas.
+- **Zoom:** a zoom 8 (vista inicial) los puntos de una misma ciudad se solapan; se separan al volar
+  a la ciudad (zoom 12). No hay un zoom único que muestre las cuatro ciudades y a la vez separe los
+  puntos dentro de cada una.

@@ -1,5 +1,6 @@
 import { X } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { SocialPostCard } from '@/components/SocialPostCard'
 import { cn } from '@/lib/utils'
 import type { Place } from '@/types/place'
 
@@ -18,6 +19,8 @@ export function SidePanel({ place, onClose }: SidePanelProps) {
 
     // Keep the last place on screen while the panel slides out, so the content
     // does not vanish mid-transition. Adjusted during render, not in an effect.
+    // Depende de que `place` sea siempre el MISMO objeto de PLACES: un objeto
+    // compuesto en render dispararía este setState en cada pasada.
     const [lastPlace, setLastPlace] = useState(place)
     if (place !== null && place !== lastPlace) {
         setLastPlace(place)
@@ -43,7 +46,7 @@ export function SidePanel({ place, onClose }: SidePanelProps) {
     return (
         <aside
             role="complementary"
-            aria-label="Detalle de la ubicación"
+            aria-label="Detalle del reporte"
             inert={!isOpen}
             className={cn(
                 'border-line bg-surface absolute inset-y-0 right-0 z-[1200] flex w-full flex-col border-l',
@@ -53,13 +56,15 @@ export function SidePanel({ place, onClose }: SidePanelProps) {
         >
             {lastPlace !== null ? (
                 <>
-                    <div className="border-line flex items-start justify-between gap-3 border-b px-5 py-4">
+                    {/* Cabecera fija. `shrink-0` para que no ceda alto cuando la
+                        lista de publicaciones crece. */}
+                    <div className="border-line flex shrink-0 items-start justify-between gap-3 border-b px-5 py-4">
                         <div className="min-w-0">
                             <span className="text-brand text-[11px] font-bold tracking-[0.1em] uppercase">
-                                {lastPlace.department}
+                                {lastPlace.name}, {lastPlace.city}
                             </span>
                             <h2 className="text-fg mt-1.5 text-lg leading-snug font-semibold tracking-tight">
-                                {lastPlace.name}
+                                {lastPlace.title}
                             </h2>
                         </div>
                         <button
@@ -72,17 +77,35 @@ export function SidePanel({ place, onClose }: SidePanelProps) {
                         </button>
                     </div>
 
-                    <div className="flex flex-col gap-5 px-5 py-5">
+                    {/* Única zona con scroll.
+                        · `min-h-0` es obligatorio: un hijo flex no encoge por
+                          debajo de su contenido sin él, y el panel entero
+                          desbordaría en vez de hacer scroll.
+                        · `key` remonta el contenedor al cambiar de punto, así el
+                          scroll vuelve arriba sin efectos ni refs. */}
+                    <div
+                        key={lastPlace.id}
+                        className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto overscroll-contain px-5 py-5"
+                    >
                         <p className="text-fg-muted text-sm leading-relaxed">{lastPlace.description}</p>
 
-                        <div className="border-line rounded-lg border p-4">
-                            <span className="text-fg-faint text-[11px] font-semibold tracking-[0.1em] uppercase">
-                                Coordenadas
-                            </span>
-                            <p className="text-fg-muted mt-2 font-mono text-sm">
-                                {lastPlace.position[0].toFixed(4)}, {lastPlace.position[1].toFixed(4)}
-                            </p>
-                        </div>
+                        <section className="flex flex-col gap-3">
+                            <h3 className="text-fg-faint text-[11px] font-semibold tracking-[0.1em] uppercase">
+                                Publicaciones ({lastPlace.posts.length})
+                            </h3>
+                            {/* `role="list"` explícito: Preflight aplica
+                                `list-style: none` y Safari/VoiceOver pierde la
+                                semántica de lista sin él. */}
+                            <ul role="list" className="flex flex-col gap-2.5">
+                                {lastPlace.posts.map((post) => (
+                                    <SocialPostCard key={post.id} post={post} />
+                                ))}
+                            </ul>
+                        </section>
+
+                        <p className="text-fg-faint text-[11px] leading-relaxed">
+                            Contenido de demostración. Las publicaciones y las cuentas son ficticias.
+                        </p>
                     </div>
                 </>
             ) : null}

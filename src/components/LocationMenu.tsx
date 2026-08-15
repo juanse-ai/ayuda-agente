@@ -1,19 +1,19 @@
 import { Check, ChevronDown, MapPin } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
-import type { Place } from '@/types/place'
+import type { City } from '@/types/place'
 
 interface LocationMenuProps {
-    places: Place[]
+    cities: City[]
     focusedId: string | null
-    onFocusPlace: (placeId: string) => void
+    onFocusCity: (cityId: string) => void
 }
 
-export function LocationMenu({ places, focusedId, onFocusPlace }: LocationMenuProps) {
+export function LocationMenu({ cities, focusedId, onFocusCity }: LocationMenuProps) {
     const [isOpen, setIsOpen] = useState(false)
     const containerRef = useRef<HTMLDivElement>(null)
 
-    const focusedPlace = places.find((place) => place.id === focusedId) ?? null
+    const focusedCity = cities.find((city) => city.id === focusedId) ?? null
 
     // Cerrar con Escape o al pulsar fuera. Un listener en `document` es la única
     // forma de enterarse de un clic que no pasa por este subárbol.
@@ -50,11 +50,11 @@ export function LocationMenu({ places, focusedId, onFocusPlace }: LocationMenuPr
     const handleToggle = useCallback(() => setIsOpen((open) => !open), [])
 
     const handleSelect = useCallback(
-        (placeId: string) => {
-            onFocusPlace(placeId)
+        (cityId: string) => {
+            onFocusCity(cityId)
             setIsOpen(false)
         },
-        [onFocusPlace]
+        [onFocusCity]
     )
 
     return (
@@ -67,7 +67,7 @@ export function LocationMenu({ places, focusedId, onFocusPlace }: LocationMenuPr
                 className="border-line text-fg-muted hover:bg-surface hover:text-fg flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors duration-200"
             >
                 <MapPin size={13} strokeWidth={2} aria-hidden />
-                {focusedPlace === null ? 'Ubicaciones afectadas' : focusedPlace.name}
+                {focusedCity === null ? 'Ubicaciones afectadas' : focusedCity.name}
                 <ChevronDown
                     size={13}
                     strokeWidth={2}
@@ -82,24 +82,24 @@ export function LocationMenu({ places, focusedId, onFocusPlace }: LocationMenuPr
                     aria-label="Ubicaciones afectadas"
                     className="border-line bg-surface absolute top-full right-0 mt-2 w-60 overflow-hidden rounded-xl border shadow-2xl shadow-black/50"
                 >
-                    {places.map((place) => (
+                    {cities.map((city) => (
                         <button
-                            key={place.id}
+                            key={city.id}
                             type="button"
                             role="menuitemradio"
-                            aria-checked={place.id === focusedId}
-                            onClick={() => handleSelect(place.id)}
+                            aria-checked={city.id === focusedId}
+                            onClick={() => handleSelect(city.id)}
                             className="hover:bg-surface-muted flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left transition-colors duration-200"
                         >
                             <span className="min-w-0">
                                 <span className="text-fg block truncate text-sm font-medium">
-                                    {place.name}
+                                    {city.name}
                                 </span>
                                 <span className="text-fg-subtle block truncate text-xs">
-                                    {place.department}
+                                    {city.department}
                                 </span>
                             </span>
-                            {place.id === focusedId ? (
+                            {city.id === focusedId ? (
                                 <Check
                                     size={15}
                                     strokeWidth={2}

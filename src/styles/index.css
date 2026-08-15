@@ -29,6 +29,10 @@
     --color-brand: #7b9cff; /* --ff-primary-soft */
     --color-brand-strong: #4361ff; /* --ff-primary */
 
+    /* Puntos del mapa: rojo = necesita ayuda, verde = ofrece ayuda */
+    --color-need: #f87171;
+    --color-offer: #4ade80;
+
     /* Radii — inputs 6, buttons 10, cards 12-16, panels 24, pill 9999 */
     --radius-sm: 6px;
     --radius-md: 10px;
@@ -131,11 +135,22 @@ body {
    ========================================================================== */
 
 .leaflet-container .ayuda-marker {
+    /* Color propio del punto, según necesita/ofrece ayuda; el resto de reglas
+       lo consumen en vez de repetir el condicional por variante. */
+    --marker-color: var(--color-brand);
     display: grid;
     place-items: center;
     background: transparent;
     border: none;
     cursor: pointer;
+}
+
+.leaflet-container .ayuda-marker--needed {
+    --marker-color: var(--color-need);
+}
+
+.leaflet-container .ayuda-marker--offered {
+    --marker-color: var(--color-offer);
 }
 
 .leaflet-container .ayuda-marker:focus-visible {
@@ -149,8 +164,8 @@ body {
     width: 14px;
     height: 14px;
     border-radius: 9999px;
-    background: var(--color-brand);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-brand) 22%, transparent);
+    background: var(--marker-color);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--marker-color) 22%, transparent);
     transition:
         background-color 200ms,
         box-shadow 200ms,
@@ -158,13 +173,13 @@ body {
 }
 
 .leaflet-container .ayuda-marker:hover > span {
-    box-shadow: 0 0 0 6px color-mix(in srgb, var(--color-brand) 22%, transparent);
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--marker-color) 22%, transparent);
 }
 
 .leaflet-container .ayuda-marker--selected > span {
     background: var(--color-fg);
     box-shadow:
-        0 0 0 4px var(--color-brand),
-        0 0 0 10px color-mix(in srgb, var(--color-brand) 25%, transparent);
+        0 0 0 4px var(--marker-color),
+        0 0 0 10px color-mix(in srgb, var(--marker-color) 25%, transparent);
     transform: scale(1.1);
 }

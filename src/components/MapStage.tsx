@@ -2,7 +2,7 @@ import { AttributionControl, MapContainer, TileLayer, ZoomControl } from 'react-
 import { MapFocus } from '@/components/MapFocus'
 import { PlaceMarker } from '@/components/PlaceMarker'
 import { MAP_CENTER, MAP_ZOOM } from '@/data/places'
-import type { Place } from '@/types/place'
+import type { City, Place } from '@/types/place'
 
 const TILE_URL = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
 const TILE_ATTRIBUTION =
@@ -11,7 +11,7 @@ const TILE_ATTRIBUTION =
 interface MapStageProps {
     places: Place[]
     selectedId: string | null
-    focusedPlace: Place | null
+    focusedCity: City | null
     onSelectPlace: (placeId: string) => void
 }
 
@@ -19,7 +19,7 @@ interface MapStageProps {
  * The map itself. Reports which place was clicked; knows nothing about what
  * consumes that selection.
  */
-export function MapStage({ places, selectedId, focusedPlace, onSelectPlace }: MapStageProps) {
+export function MapStage({ places, selectedId, focusedCity, onSelectPlace }: MapStageProps) {
     return (
         <MapContainer
             center={MAP_CENTER}
@@ -34,7 +34,7 @@ export function MapStage({ places, selectedId, focusedPlace, onSelectPlace }: Ma
                 required OpenStreetMap/CARTO attribution. */}
             <ZoomControl position="bottomleft" />
             <AttributionControl position="bottomleft" prefix={false} />
-            <MapFocus place={focusedPlace} />
+            <MapFocus city={focusedCity} />
             {places.map((place) => (
                 <PlaceMarker
                     key={place.id}
