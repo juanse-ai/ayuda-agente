@@ -1,4 +1,4 @@
-import { MessageCircle } from 'lucide-react'
+import { Baby } from 'lucide-react'
 
 /**
  * Llamada al feedback, anclada abajo a la izquierda sobre las dos pestañas.
@@ -19,8 +19,8 @@ export function FeedbackButton() {
             href="/cami"
             className="border-line bg-surface text-fg-muted hover:text-fg hover:border-brand/60 absolute bottom-20 left-4 z-[1150] flex items-center gap-2 rounded-full border px-4 py-2 text-sm shadow-2xl shadow-black/50 transition-colors duration-200 xl:bottom-4"
         >
-            <MessageCircle size={14} strokeWidth={2} aria-hidden />
-            Déjanos tu feedback
+            <Baby size={14} strokeWidth={2} aria-hidden />
+            Cami
         </a>
     )
 }
