@@ -113,7 +113,7 @@ interface ConnectionsViewProps {
 
 /**
  * La vista Conexiones completa: grafo + leyenda + chat + panel lateral.
- *
+ * hola
  * Su estado (selección, spotlight, conversación) vive aquí, no en App: la vista
  * se monta al activar la pestaña y se desmonta al salir, así que arranca de cero
  * cada visita (la animación de entrada del grafo se repite a propósito). Los
