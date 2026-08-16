@@ -42,7 +42,10 @@ src/
 │   ├── places.ts              CIUDADES y PUNTOS de ejemplo (datos ficticios)
 │   ├── connections.ts         Emparejamientos, posiciones del grafo y escenarios del chat (ficticios)
 │   └── platforms.ts           Plataforma → etiqueta + ruta del logo + acción de respuesta
-├── lib/utils.ts               cn()
+├── lib/
+│   ├── apiClient.ts           Cliente Axios base — único punto que conoce la URL de la API
+│   ├── useBackgroundMusic.ts  Hook de la música de fondo
+│   └── utils.ts               cn()
 ├── styles/index.css           Tokens del tema, CSS de Leaflet y ajustes para modo oscuro
 └── types/
     ├── place.ts               Place, City, SocialPost, SocialPlatform
