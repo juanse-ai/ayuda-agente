@@ -1,4 +1,5 @@
 import { EventMenu } from '@/components/EventMenu'
+import { FailFastLink } from '@/components/FailFastLink'
 import { LocationMenu } from '@/components/LocationMenu'
 import { MusicToggle } from '@/components/MusicToggle'
 import { cn } from '@/lib/utils'
@@ -123,6 +124,10 @@ export function AppHeader({
                     <MusicToggle />
                 </div>
             </div>
+            {/* La firma de quién hizo esto cierra la barra por la derecha. Va
+                fuera del grupo de mandos a propósito: no es un mando del evento
+                y en móvil no debe irse con ellos a flotar sobre el mapa. */}
+            <FailFastLink />
         </header>
     )
 }
