@@ -1,5 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { Analytics } from '@vercel/analytics/react'
 import App from './App.tsx'
 import { VideoLoop } from './components/VideoLoop.tsx'
 import './styles/index.css'
@@ -13,5 +14,8 @@ const path = window.location.pathname.replace(/\/+$/, '').toLowerCase() || '/'
 const isVideoRoute = VIDEO_ROUTES.includes(path)
 
 createRoot(document.getElementById('root')!).render(
-    <StrictMode>{isVideoRoute ? <VideoLoop /> : <App />}</StrictMode>
+    <StrictMode>
+        {isVideoRoute ? <VideoLoop /> : <App />}
+        <Analytics />
+    </StrictMode>
 )
