@@ -170,7 +170,7 @@ export function ChatBar({
                         // Un turno a la vez por conversación: mandar otro mensaje
                         // mientras el agente responde entrelaza las dos escrituras.
                         disabled={blockedBy !== null}
-                        placeholder={blockedBy ?? 'Escribe cómo quieres ayudar…'}
+                        placeholder={blockedBy ?? '¿Cómo quieres ayudar o recibir ayuda?'}
                         aria-label="Mensaje"
                         // `text-base` son los 16 px que Safari en iOS necesita
                         // para no hacer zoom al enfocar el campo y descuadrar la

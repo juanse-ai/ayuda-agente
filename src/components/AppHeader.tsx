@@ -110,15 +110,7 @@ export function AppHeader({
                 {/* El de ubicaciones solo mueve la cámara del mapa. En Conexiones
                     se oculta con visibility (no display) para no dejar hueco ni
                     desplazar el resto de mandos; `inert` lo saca del tab-order. */}
-                <div
-                    className={cn(
-                        'pointer-events-auto min-w-0 flex-1 sm:flex-initial',
-                        activeTab !== 'mapa' && 'invisible'
-                    )}
-                    inert={activeTab !== 'mapa'}
-                >
-                    <LocationMenu cities={cities} focusedId={focusedId} onFocusCity={onFocusCity} />
-                </div>
+            
                 {/* La música es global: el botón sigue visible en todas las pestañas. */}
                 <div className="pointer-events-auto">
                     <MusicToggle />
