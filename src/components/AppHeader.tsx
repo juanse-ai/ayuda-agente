@@ -37,9 +37,22 @@ export function AppHeader({
     onSelectTab
 }: AppHeaderProps) {
     return (
-        // `relative z-[1300]` para que el menú desplegable se pinte por encima
-        // del mapa y del panel lateral, que vienen después en el DOM.
-        <header className="border-line bg-page relative z-[1300] flex h-16 shrink-0 items-center justify-between gap-4 border-b px-4 sm:px-6">
+        // `relative` ancla el grupo de mandos, que en móvil sale de la barra y
+        // flota sobre el mapa (ver más abajo), y con él los desplegables.
+        //
+        // El z sube a 1300 desde `sm` para que el desplegable se pinte por encima
+        // del mapa y del panel lateral, que vienen después en el DOM. En móvil se
+        // queda en 1175 a propósito: ahí lo que sobrevuela el mapa es el grupo de
+        // mandos, que debe taparle el zoom y la atribución (1150) pero quedarse
+        // por debajo del panel de detalle (1200). La barra en sí no compite con
+        // nada: ocupa su propia fila de la rejilla.
+        //
+        // `min-w-0` es obligatorio: como hijo de esa rejilla, su ancho mínimo
+        // automático es su contenido, así que sin él la columna entera se
+        // estiraría hasta caber la barra y sería la página la que desbordaría.
+        // `flex-wrap` es el seguro: en una pantalla aún más estrecha el peor caso
+        // es una fila de más, nunca una barra desbordada con scroll horizontal.
+        <header className="border-line bg-page relative z-[1175] flex min-w-0 shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b px-4 py-3 sm:z-[1300] sm:h-16 sm:flex-nowrap sm:gap-4 sm:px-6 sm:py-0">
             {/* width/height son el tamaño intrínseco real del archivo: reservan
                 el espacio correcto y evitan el salto de layout al cargar. */}
             <img
@@ -62,7 +75,11 @@ export function AppHeader({
                         aria-selected={activeTab === tab.id}
                         onClick={() => onSelectTab(tab.id)}
                         className={cn(
-                            'rounded-full px-4 py-1.5 text-sm font-medium transition-colors duration-200',
+                            // `px-3` en móvil para que logo y pestañas quepan en
+                            // la primera fila; `coarse:py-2` sube el objetivo
+                            // táctil sin tocar el ratón.
+                            'rounded-full px-3 py-1.5 text-sm font-medium transition-colors duration-200',
+                            'coarse:py-2 sm:px-4',
                             activeTab === tab.id ? 'bg-surface-muted text-fg' : 'text-fg-subtle hover:text-fg'
                         )}
                     >
@@ -70,23 +87,41 @@ export function AppHeader({
                     </button>
                 ))}
             </div>
-            <div className="flex shrink-0 items-center gap-2">
+            {/* Los mandos del evento. En un teléfono no caben en la barra —logo,
+                pestañas y los dos menús pasan de 500 px—, así que por debajo de
+                `sm` salen de ella y flotan justo debajo, sobre el mapa, a ancho
+                completo y con cada menú ocupando la mitad. Siguen viviendo aquí y
+                no en App para no duplicar el grupo ni sus props: basta con
+                sacarlos del flujo. `pointer-events` sigue el patrón de ChatBar —
+                la franja no debe robarle al mapa el arrastre entre pastilla y
+                pastilla. */}
+            <div className="pointer-events-none absolute inset-x-4 top-full mt-3 flex min-w-0 items-center gap-2 sm:pointer-events-auto sm:static sm:mt-0 sm:w-auto">
                 {/* La emergencia es el ámbito de todo —mapa, grafo y los dos
                     chats—, así que su selector no se esconde en ninguna pestaña. */}
-                <EventMenu
-                    events={events}
-                    selectedId={selectedEventId}
-                    summary={eventSummary}
-                    onSelect={onSelectEvent}
-                />
+                <div className="pointer-events-auto min-w-0 flex-1 sm:flex-initial">
+                    <EventMenu
+                        events={events}
+                        selectedId={selectedEventId}
+                        summary={eventSummary}
+                        onSelect={onSelectEvent}
+                    />
+                </div>
                 {/* El de ubicaciones solo mueve la cámara del mapa. En Conexiones
                     se oculta con visibility (no display) para no dejar hueco ni
-                    desplazar las pestañas; `inert` lo saca del tab-order. */}
-                <div className={cn(activeTab !== 'mapa' && 'invisible')} inert={activeTab !== 'mapa'}>
+                    desplazar el resto de mandos; `inert` lo saca del tab-order. */}
+                <div
+                    className={cn(
+                        'pointer-events-auto min-w-0 flex-1 sm:flex-initial',
+                        activeTab !== 'mapa' && 'invisible'
+                    )}
+                    inert={activeTab !== 'mapa'}
+                >
                     <LocationMenu cities={cities} focusedId={focusedId} onFocusCity={onFocusCity} />
                 </div>
                 {/* La música es global: el botón sigue visible en todas las pestañas. */}
-                <MusicToggle />
+                <div className="pointer-events-auto">
+                    <MusicToggle />
+                </div>
             </div>
         </header>
     )

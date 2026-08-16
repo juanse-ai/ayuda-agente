@@ -88,6 +88,7 @@ src/
 │   ├── useGraphViewport.ts    La cámara del grafo: arrastrar, acercar, encuadrar
 │   ├── useResource.ts         Un detalle que se pide al abrirlo (contactos, publicaciones)
 │   ├── useAgentChat.ts        La conversación: burbujas, borrador, hilo y turno en curso
+│   ├── useUserLocation.ts     Dónde está quien pregunta; se adjunta a cada turno del chat
 │   ├── useBackgroundMusic.ts  Hook de la música de fondo
 │   └── utils.ts               cn()
 ├── styles/index.css           Tokens del tema, CSS de Leaflet y ajustes para modo oscuro

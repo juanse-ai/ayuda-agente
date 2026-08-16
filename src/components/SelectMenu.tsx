@@ -73,14 +73,23 @@ export function SelectMenu({ label, placeholder, icon, items, selectedId, onSele
     )
 
     return (
-        <div ref={containerRef} className="relative">
+        // `static` en móvil a propósito: así el desplegable de abajo no se ancla
+        // a este botón —que ahí ocupa media fila y dejaría medio menú fuera de
+        // pantalla— sino al ancestro posicionado más cercano, que es la fila de
+        // mandos de AppHeader; el menú cae a su mismo ancho. La contención en el
+        // DOM no cambia, así que el clic fuera sigue midiéndose con `containerRef`.
+        <div ref={containerRef} className="static sm:relative">
             <button
                 type="button"
                 onClick={handleToggle}
                 aria-haspopup="menu"
                 aria-expanded={isOpen}
                 aria-label={label}
-                className="border-line text-fg-muted hover:bg-surface hover:text-fg flex max-w-[16rem] items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors duration-200"
+                // `w-full` para que el botón siga el ancho que le den y no el de
+                // su texto: un <button> encoge a su contenido aunque sea `flex`,
+                // y sin esto el título largo desbordaría en vez de recortarse.
+                // El máximo lo sigue poniendo `max-w-[16rem]`.
+                className="border-line text-fg-muted hover:bg-surface hover:text-fg coarse:py-2.5 flex w-full max-w-[16rem] items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors duration-200"
             >
                 {icon}
                 <span className="truncate">{selected === null ? placeholder : selected.title}</span>
@@ -96,7 +105,9 @@ export function SelectMenu({ label, placeholder, icon, items, selectedId, onSele
                 <div
                     role="menu"
                     aria-label={label}
-                    className="border-line bg-surface absolute top-full right-0 mt-2 max-h-[60dvh] w-80 overflow-y-auto overscroll-contain rounded-xl border shadow-2xl shadow-black/50"
+                    // En móvil cuelga a ancho completo de la fila de mandos (ver
+                    // el `static` de arriba); desde `sm` vuelve a colgar del botón.
+                    className="border-line bg-surface absolute top-full right-0 left-0 mt-2 max-h-[60dvh] w-auto overflow-y-auto overscroll-contain rounded-xl border shadow-2xl shadow-black/50 sm:left-auto sm:w-80"
                 >
                     {items.map((item) => (
                         <button

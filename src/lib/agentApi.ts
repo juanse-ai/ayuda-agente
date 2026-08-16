@@ -10,6 +10,7 @@
  * que sigue viviendo en un único sitio.
  */
 import { API_BASE_URL, API_HEADERS } from '@/lib/apiClient'
+import type { GeoPoint } from '@/types/graph'
 
 /** Los dos agentes que expone el backend. */
 export type AgentName = 'coordination' | 'frontier'
@@ -36,11 +37,12 @@ export type AgentEvent =
  * se pintan: son ids y slugs internos.
  */
 const TOOL_LABELS: Record<string, string> = {
+    match_resource: 'Buscando el otro lado del recurso',
+    check_coverage: 'Comprobando si ya va ayuda en camino',
+    find_gaps: 'Buscando lo que nadie está cubriendo',
     get_balance: 'Comparando oferta y demanda',
-    find_requirements: 'Buscando necesidades y ofertas',
     get_actor_contacts: 'Buscando cómo contactarles',
     road_distance: 'Midiendo el trayecto real',
-    plan_trip_stops: 'Ordenando las paradas',
     propose_match: 'Proponiendo un emparejamiento',
     draft_outreach: 'Redactando un mensaje',
     get_frontier: 'Revisando dónde mirar',
@@ -58,6 +60,11 @@ interface AskAgentOptions {
     message: string
     /** Omitir en el primer turno: el evento `start` trae el que hay que reutilizar. */
     threadId: string | null
+    /**
+     * Dónde está quien pregunta, si el navegador lo dio. Null se omite del
+     * cuerpo: el backend distingue "no la compartió" de una posición inválida.
+     */
+    location?: GeoPoint | null
     onEvent: (event: AgentEvent) => void
     signal?: AbortSignal
 }
@@ -90,13 +97,21 @@ export async function askAgent({
     eventId,
     message,
     threadId,
+    location,
     onEvent,
     signal
 }: AskAgentOptions): Promise<void> {
     const response = await fetch(`${API_BASE_URL}/api/agent/${agent}/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...API_HEADERS },
-        body: JSON.stringify({ event_id: eventId, message, thread_id: threadId ?? undefined }),
+        // `JSON.stringify` descarta las claves `undefined`, así que un turno sin
+        // hilo o sin ubicación manda el cuerpo sin ellas en vez de con nulls.
+        body: JSON.stringify({
+            event_id: eventId,
+            message,
+            thread_id: threadId ?? undefined,
+            location: location ?? undefined
+        }),
         signal
     })
 

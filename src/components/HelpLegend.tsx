@@ -11,7 +11,11 @@ interface HelpLegendProps {
  */
 export function HelpLegend({ showConnection = false }: HelpLegendProps) {
     return (
-        <div className="border-line bg-surface/85 absolute top-4 left-4 z-[1100] flex flex-col gap-2 rounded-xl border px-4 py-3 backdrop-blur">
+        // `top-16` en móvil deja pasar la fila de mandos que ahí flota debajo de
+        // la cabecera. El ancho máximo solo muerde en pantallas estrechas y solo
+        // en el grafo: la fila de "Conexión" es larga y sin él llegaría hasta el
+        // control de zoom, que ahí se pinta arriba a la derecha; acotada, envuelve.
+        <div className="border-line bg-surface/85 absolute top-16 left-4 z-[1100] flex max-w-[16rem] flex-col gap-2 rounded-xl border px-4 py-3 backdrop-blur sm:top-4 sm:max-w-none">
             <div className="flex items-center gap-2.5">
                 <span className="bg-need size-2.5 shrink-0 rounded-full" aria-hidden />
                 <span className="text-fg-muted text-xs">Necesita ayuda</span>

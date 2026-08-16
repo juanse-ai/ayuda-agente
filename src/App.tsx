@@ -147,7 +147,7 @@ export default function App() {
                     datos ambas están vacías y el silencio se lee como una app rota.
                     Si falló, el propio aviso es el botón de reintentar. */}
                 {isLoading ? (
-                    <div className="border-line bg-surface text-fg-muted pointer-events-none absolute top-4 left-1/2 z-[1250] -translate-x-1/2 rounded-full border px-4 py-2 text-sm shadow-2xl shadow-black/50">
+                    <div className="border-line bg-surface text-fg-muted pointer-events-none absolute top-4 left-1/2 z-[1250] max-w-[calc(100%-2rem)] -translate-x-1/2 rounded-full border px-4 py-2 text-center text-sm shadow-2xl shadow-black/50">
                         Cargando la emergencia…
                     </div>
                 ) : null}
@@ -156,7 +156,10 @@ export default function App() {
                         type="button"
                         // Reintenta lo que falló: la lista de emergencias o su grafo.
                         onClick={eventsError !== '' ? reloadEvents : reload}
-                        className="border-line bg-surface text-fg-muted hover:text-fg hover:border-brand/60 absolute top-4 left-1/2 z-[1250] -translate-x-1/2 rounded-full border px-4 py-2 text-sm shadow-2xl shadow-black/50 transition-colors duration-200"
+                        // El motivo del fallo lo escribe el servidor y puede ser
+                        // largo: acotado al ancho de la pantalla envuelve en vez
+                        // de desbordarla.
+                        className="border-line bg-surface text-fg-muted hover:text-fg hover:border-brand/60 absolute top-4 left-1/2 z-[1250] max-w-[calc(100%-2rem)] -translate-x-1/2 rounded-full border px-4 py-2 text-center text-sm shadow-2xl shadow-black/50 transition-colors duration-200"
                     >
                         No pude cargar la emergencia: {loadError}. Reintentar →
                     </button>

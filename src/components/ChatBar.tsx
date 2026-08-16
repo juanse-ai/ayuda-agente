@@ -86,7 +86,10 @@ export function ChatBar({
                 <div
                     role="log"
                     aria-label="Conversación"
-                    className="flex max-h-[40dvh] flex-col gap-2 overflow-y-auto overscroll-contain pr-1"
+                    // `mb-12` reserva la banda a la que sube el botón de feedback
+                    // cuando esta columna llega a las esquinas (ver FeedbackButton):
+                    // sin ella las burbujas quedarían debajo del botón.
+                    className="mb-12 flex max-h-[40dvh] flex-col gap-2 overflow-y-auto overscroll-contain pr-1 xl:mb-0"
                 >
                     {messages.map((message) => {
                         const label = pendingLabel(message)
@@ -136,13 +139,15 @@ export function ChatBar({
                         disabled={blockedBy !== null}
                         placeholder={blockedBy ?? 'Escribe cómo quieres ayudar…'}
                         aria-label="Mensaje"
-                        className="text-fg placeholder:text-fg-faint min-w-0 flex-1 bg-transparent px-3 text-sm outline-none"
+                        // 16 px con el dedo: por debajo de eso Safari en iOS hace
+                        // zoom al enfocar el campo y descuadra la pantalla entera.
+                        className="text-fg placeholder:text-fg-faint coarse:text-base min-w-0 flex-1 bg-transparent px-3 text-sm outline-none"
                     />
                     <button
                         type="submit"
                         disabled={draft.trim() === '' || blockedBy !== null}
                         aria-label="Enviar"
-                        className="bg-brand-strong text-fg grid size-9 shrink-0 place-items-center rounded-full transition-opacity duration-200 disabled:opacity-40"
+                        className="bg-brand-strong text-fg coarse:size-11 grid size-9 shrink-0 place-items-center rounded-full transition-opacity duration-200 disabled:opacity-40"
                     >
                         <ArrowUp size={16} strokeWidth={2} aria-hidden />
                     </button>
