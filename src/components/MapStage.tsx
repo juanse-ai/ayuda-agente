@@ -1,8 +1,9 @@
 import { AttributionControl, MapContainer, TileLayer, ZoomControl } from 'react-leaflet'
+import { MapFit } from '@/components/MapFit'
 import { MapFocus } from '@/components/MapFocus'
 import { MapSpotlight } from '@/components/MapSpotlight'
 import { PlaceMarker } from '@/components/PlaceMarker'
-import { MAP_CENTER, MAP_ZOOM } from '@/data/places'
+import { MAP_CENTER, MAP_ZOOM } from '@/data/graphView'
 import type { City, Place } from '@/types/place'
 
 const TILE_URL = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
@@ -11,6 +12,8 @@ const TILE_ATTRIBUTION =
 
 interface MapStageProps {
     places: Place[]
+    /** Emergencia en pantalla: al cambiar, la cámara se reencuadra. */
+    eventId: number | null
     selectedId: string | null
     focusedCity: City | null
     /** Punto encontrado por el chat del mapa; ver MapSpotlight sobre su identidad. */
@@ -24,6 +27,7 @@ interface MapStageProps {
  */
 export function MapStage({
     places,
+    eventId,
     selectedId,
     focusedCity,
     spotlight = null,
@@ -43,6 +47,7 @@ export function MapStage({
                 required OpenStreetMap/CARTO attribution. */}
             <ZoomControl position="bottomleft" />
             <AttributionControl position="bottomleft" prefix={false} />
+            <MapFit places={places} fitKey={eventId} />
             <MapFocus city={focusedCity} />
             <MapSpotlight target={spotlight} />
             {places.map((place) => (

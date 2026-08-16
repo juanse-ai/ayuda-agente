@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react'
-import { GRAPH_VIEWBOX } from '@/data/connections'
+import { GRAPH_VIEWBOX } from '@/data/graphView'
 import type { Connection, GraphPoint } from '@/types/connection'
 import type { Place } from '@/types/place'
 
@@ -16,8 +16,21 @@ interface ConnectionsGraphProps {
 const SETTLE_MS = 1400
 const SPOTLIGHT_SCALE = 1.8
 
+/**
+ * A partir de aquí las etiquetas estorban más de lo que ayudan: los nombres
+ * reales son largos y con muchos puntos se pisan unos a otros. El nombre sigue
+ * a un clic de distancia, en el panel.
+ */
+const MAX_LABELLED_DOTS = 25
+const MAX_LABEL_CHARS = 22
+
 function easeOutCubic(t: number) {
     return 1 - Math.pow(1 - t, 3)
+}
+
+/** Nombre del actor recortado a lo que cabe bajo un punto. */
+function shortLabel(name: string): string {
+    return name.length > MAX_LABEL_CHARS ? `${name.slice(0, MAX_LABEL_CHARS - 1).trimEnd()}…` : name
 }
 
 /**
@@ -32,7 +45,9 @@ function scatterPoint(index: number): GraphPoint {
 }
 
 /**
- * El grafo en sí: SVG dibujado a mano (diez puntos no ameritan librería).
+ * El grafo en sí: SVG dibujado a mano, sin librería de grafos. Las posiciones
+ * de reposo vienen calculadas de fuera (la geografía real proyectada sobre el
+ * viewBox), así que aquí no hay layout que resolver: solo pintar y animar.
  *
  * Presentational: reporta clics y pinta lo que le digan las props, sin estado
  * propio. La única maquinaria es un bucle rAF que escribe transform de puntos
@@ -270,15 +285,17 @@ export function ConnectionsGraph({
                                 stroke={isHighlighted ? color : 'none'}
                                 strokeWidth={isHighlighted ? 3 : 0}
                             />
-                            <text
-                                y={30}
-                                textAnchor="middle"
-                                fill="var(--color-fg-subtle)"
-                                fontSize={11}
-                                className="pointer-events-none select-none"
-                            >
-                                {place.name}
-                            </text>
+                            {places.length <= MAX_LABELLED_DOTS ? (
+                                <text
+                                    y={30}
+                                    textAnchor="middle"
+                                    fill="var(--color-fg-subtle)"
+                                    fontSize={11}
+                                    className="pointer-events-none select-none"
+                                >
+                                    {shortLabel(place.name)}
+                                </text>
+                            ) : null}
                         </g>
                     )
                 })}

@@ -2,11 +2,30 @@
 
 Interfaz de mapa oscura construida con React 19, Vite, TypeScript, Tailwind CSS v4 y react-leaflet.
 
-La cabecera expone dos pestañas. **Mapa** es el escenario principal: al hacer clic en una ubicación
-se abre un panel lateral superpuesto con su detalle. **Conexiones** muestra un grafo flotante que
-empareja puntos que necesitan ayuda con puntos que la ofrecen. Ambas pestañas llevan un chat de
-demostración en la parte inferior: en Mapa vuela la cámara al punto que coincide con la petición;
-en Conexiones hace zoom sobre el grafo.
+Todo lo que se ve sale del backend: una sola llamada a `GET /api/events/<id>/graph/` trae los actores
+de la emergencia, sus necesidades u ofertas abiertas y los emparejamientos entre ellos.
+
+La cabecera lleva el **selector de emergencia** —el ámbito de todo lo demás— y, a su derecha, el de
+ubicaciones. Expone dos pestañas. **Mapa** es el escenario principal: al hacer clic en un punto se
+abre un panel lateral superpuesto con lo que ese actor pide u ofrece, cómo contactarle y las
+publicaciones de donde salió cada necesidad. **Conexiones** muestra el mismo conjunto como grafo
+flotante, con un hilo por emparejamiento. Ambas pestañas llevan un chat en la parte inferior que
+habla con el agente de coordinación; además, en Mapa vuela la cámara al punto que coincide con la
+petición y en Conexiones hace zoom sobre el grafo.
+
+### Qué endpoints se consumen
+
+| Endpoint                    | Para qué                                      |
+| --------------------------- | --------------------------------------------- |
+| `GET /events/`              | el selector de emergencia                     |
+| `GET /events/{id}/`         | los recuentos de la emergencia abierta        |
+| `GET /events/{id}/graph/`   | el mapa y el grafo enteros                    |
+| `GET /actors/{id}/`         | los contactos, al abrir un punto              |
+| `GET /requirements/{id}/`   | las publicaciones, al desplegar una necesidad |
+| `POST /agent/coordination/` | el chat                                       |
+
+Quedan sin usar `observations/`, `outreach/`, `requirements/` filtrado y `resource-types/`: son las
+piezas de la vista de radar, de los borradores de contacto y de los filtros, que todavía no existen.
 
 ## Comandos
 
@@ -18,46 +37,70 @@ npm run lint      # oxlint
 npm run format    # prettier --write .
 ```
 
+Dos variables, en `.env` (ignorado por git) o `.env.local`. **Solo se exponen al navegador las que
+empiezan por `VITE_`**: una llamada `X-API-Key` no llega al código y el backend responde 401.
+
+```bash
+VITE_API_BASE_URL=https://…      # origen del backend; sin ella, el túnel de src/lib/apiClient.ts
+VITE_API_KEY=…                   # obligatoria: todo /api/ responde 401 sin clave
+```
+
+`VITE_API_KEY` viaja en la cabecera `X-API-Key` de cada petición, incluida la del agente. Ojo con lo
+que dice `docs/api.md` del backend: lo que llega al navegador es público, así que esta debe ser una
+clave de solo lectura y revocable. Esconderla de verdad exige un servidor propio que haga de proxy,
+y este frontend no lo tiene.
+
 ## Estructura
 
 ```
 src/
-├── App.tsx                    Raíz de composición: pestaña activa + ciudad enfocada + punto seleccionado
+├── App.tsx                    Raíz de composición: carga el grafo y reparte pestaña, ciudad y punto
 ├── components/
-│   ├── AppHeader.tsx          Barra superior con las pestañas Mapa / Conexiones
-│   ├── ChatBar.tsx            Barra de chat de demostración compartida por las dos pestañas
+│   ├── AppHeader.tsx          Barra superior: pestañas + selector de emergencia + de ubicación
+│   ├── ContactList.tsx        Cómo contactar a un actor, en el orden que manda el backend
+│   ├── ChatBar.tsx            Barra de chat compartida por las dos pestañas (presentational)
 │   ├── HelpLegend.tsx         Leyenda de colores compartida (fila de conexión solo en el grafo)
-│   ├── LocationMenu.tsx       Desplegable de ciudades
-│   ├── MapAssistant.tsx       El chat de la pestaña Mapa (matching → volar al punto)
-│   ├── MapFocus.tsx           Vuela la cámara a la ciudad enfocada
+│   ├── EventMenu.tsx          Desplegable de emergencias (nombre + recuentos)
+│   ├── EvidenceCard.tsx       Una publicación como evidencia de una necesidad
+│   ├── LocationMenu.tsx       Desplegable de ubicaciones
+│   ├── SelectMenu.tsx         El desplegable en sí, compartido por los dos menús
+│   ├── MapAssistant.tsx       El chat de la pestaña Mapa (agente + vuelo al punto)
+│   ├── MapFit.tsx             Encuadra todos los puntos la primera vez que llegan
+│   ├── MapFocus.tsx           Vuela la cámara a la ubicación enfocada
 │   ├── MapSpotlight.tsx       Vuela la cámara al punto que encontró el chat
 │   ├── MapStage.tsx           MapContainer + capa de teselas + marcadores
 │   ├── PlaceMarker.tsx        Un punto → un marcador de Leaflet
+│   ├── RequirementCard.tsx    Una necesidad u oferta abierta dentro del panel
 │   ├── SidePanel.tsx          Panel lateral superpuesto
-│   ├── SocialPostCard.tsx     Una publicación de una red social
 │   └── connections/
-│       ├── ConnectionsView.tsx   La vista Conexiones completa (todo su estado vive aquí)
+│       ├── ConnectionsView.tsx   La vista Conexiones completa (su estado vive aquí)
 │       └── ConnectionsGraph.tsx  Grafo SVG: puntos a la deriva, hilos y spotlight
 ├── data/
-│   ├── places.ts              CIUDADES y PUNTOS de ejemplo (datos ficticios)
-│   ├── connections.ts         Emparejamientos, posiciones del grafo y escenarios del chat (ficticios)
-│   └── platforms.ts           Plataforma → etiqueta + ruta del logo + acción de respuesta
+│   ├── graphView.ts           Constantes de encuadre: centro, zooms y viewBox del grafo
+│   ├── labels.ts              Slug del backend → texto en español (amenazas, contactos, fechas)
+│   └── platforms.ts           Red social → etiqueta y logo
 ├── lib/
 │   ├── apiClient.ts           Cliente Axios base — único punto que conoce la URL de la API
+│   ├── agentApi.ts            El protocolo del agente: un POST leído como flujo de eventos (SSE)
+│   ├── eventGraph.ts          Del payload del backend a puntos, conexiones, ciudades y posiciones
+│   ├── useEvents.ts           Las emergencias activas y cuál se está mirando
+│   ├── useEventGraph.ts       Carga el grafo de la emergencia seleccionada
+│   ├── useResource.ts         Un detalle que se pide al abrirlo (contactos, publicaciones)
+│   ├── useAgentChat.ts        La conversación: burbujas, borrador, hilo y turno en curso
 │   ├── useBackgroundMusic.ts  Hook de la música de fondo
 │   └── utils.ts               cn()
 ├── styles/index.css           Tokens del tema, CSS de Leaflet y ajustes para modo oscuro
 └── types/
-    ├── place.ts               Place, City, SocialPost, SocialPlatform
-    └── connection.ts          Connection, GraphPoint, ChatScenario, ChatMessage
+    ├── graph.ts               El payload del backend, tal cual
+    ├── place.ts               Place, PlaceRequirement, City
+    └── connection.ts          Connection, GraphPoint, ChatMessage
 ```
 
-Dos entidades: **ciudades**, que alimentan el desplegable del header y el vuelo del mapa, y
-**puntos**, que son los reportes sobre el mapa. Cada punto tiene un título, una descripción y una
-lista de publicaciones de Instagram, X, Facebook y TikTok.
+`src/types/graph.ts` es el contrato con el backend y `src/lib/eventGraph.ts` la única frontera que lo
+traduce: los componentes solo conocen `Place`, `Connection` y `City`, y no saben que existe una API.
 
-`MapStage` reporta qué punto se seleccionó pero no lo almacena; `SidePanel` no conoce Leaflet.
-`App` es lo único que conoce a ambos.
+`MapStage` reporta qué punto se seleccionó pero no lo almacena; `SidePanel` no conoce Leaflet. `App`
+es lo único que conoce a ambos, y también el único que carga datos.
 
 ## Notas
 
@@ -67,17 +110,33 @@ lista de publicaciones de Instagram, X, Facebook y TikTok.
 - **Marcadores:** se usa `divIcon` en lugar del icono por defecto de Leaflet, cuyos PNG no se
   resuelven bajo Vite.
 - **Pestañas:** la capa del mapa queda siempre montada y se oculta con `visibility` (nunca
-  `display: none`): Leaflet mide su contenedor al montar y perdería la cámara. Conexiones, en
-  cambio, se monta al activarse: su animación de entrada se repite y su estado arranca de cero.
-- **Conexiones:** todo es maqueta sobre datos ficticios. El chat busca palabras clave (sin IA), los
-  emparejamientos y sus fuerzas vienen fijados en `src/data/connections.ts` y el "envío" de
-  respuestas a las redes es solo visual: no hay ninguna llamada a APIs ni publicación real.
-- **Datos:** `src/data/places.ts` y `src/data/connections.ts` contienen **datos ficticios** de
-  demostración. Ver el aviso al inicio de cada archivo. Son los únicos archivos que cambian al
-  conectar datos reales.
-- **Logos:** viven en `public/logos/` y son mapas de bits sin posibilidad de recolorear. Se muestran
-  dentro de un marco común porque el de X es un disco negro que, suelto, se pierde sobre el fondo
-  oscuro. `src/data/platforms.ts` es el único punto que conoce sus rutas.
-- **Zoom:** a zoom 8 (vista inicial) los puntos de una misma ciudad se solapan; se separan al volar
-  a la ciudad (zoom 12). No hay un zoom único que muestre las cuatro ciudades y a la vez separe los
-  puntos dentro de cada una.
+  `display: none`): Leaflet mide su contenedor al montar y perdería la cámara. Conexiones, en cambio,
+  se monta al activarse: su animación de entrada se repite y su estado arranca de cero.
+- **Cambiar de emergencia** recarga el grafo y reinicia lo que había en pantalla: ubicación
+  enfocada, punto abierto y las dos conversaciones. Lo último no es cosmética — un `thread_id`
+  pertenece al agente construido para un evento, y arrastrarlo al siguiente mezclaría contextos.
+- **Detalles a demanda:** los contactos se piden al abrir un punto y las publicaciones al desplegar
+  una necesidad. Con doscientos actores, traerlo todo por adelantado sería una carga que nadie mira
+  entera. Los contactos se pintan en el orden que manda el backend (`preference_rank`) y con su
+  `times_seen`: un teléfono repetido en cinco publicaciones y otro visto una vez no merecen la misma
+  confianza. Las cuentas de pago y las direcciones se enseñan como dato, nunca como acción.
+- **Chat:** cada pestaña mantiene su propia conversación con `POST /api/agent/coordination/`. La
+  respuesta llega en streaming (SSE) y se va escribiendo token a token; mientras tanto se enseña qué
+  herramienta está usando el agente. El `thread_id` que devuelve el servidor se reenvía en los turnos
+  siguientes, y solo se permite un turno a la vez por conversación.
+- **Encuadre guiado:** el agente contesta en prosa y nunca devuelve el id de un punto, así que a
+  dónde volar lo decide `findPlaceForText` sobre el texto del usuario: primero por recurso, ubicación
+  o nombre del actor, y si nada encaja, por las palabras del reporte original. Ante un empate gana
+  quien necesita ayuda.
+- **Qué se pinta y qué no:** un actor no aparece si no trae coordenadas, si su ubicación es más
+  gruesa que `admin_2` (un centroide de departamento como marcador afirma un sitio que nadie
+  reportó) o si no tiene nada abierto (no hay color que asignarle sin decir algo que no dijo). Un
+  hilo con un extremo fuera se descarta con él.
+- **Simplificación conocida:** una arista con `via_transport_actor` se dibuja recta entre oferta y
+  necesidad; el transportista que haría la entrega no se ve en el hilo.
+- **Grafo:** las posiciones de reposo son la geografía real proyectada sobre el viewBox, así que los
+  cúmulos del grafo son los del mapa. Los actores de un mismo barrio caerían en el mismo píxel, por
+  lo que se reparten en corrillo alrededor de su posición; las etiquetas se recortan y desaparecen
+  por encima de 25 puntos, donde estorban más de lo que ayudan.
+- **Nada se envía:** la interfaz no publica ni contacta a nadie. Contactar pasa por el agente, que
+  redacta un borrador con enlace para que una persona lo abra.

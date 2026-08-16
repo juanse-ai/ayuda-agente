@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { useMap } from 'react-leaflet'
-import { PLACE_ZOOM } from '@/data/places'
+import { PLACE_ZOOM } from '@/data/graphView'
 import type { Place } from '@/types/place'
 
 interface MapSpotlightProps {
@@ -8,7 +8,7 @@ interface MapSpotlightProps {
      * Envoltorio creado NUEVO en cada petición del chat, a propósito: el
      * efecto depende de su identidad, así que repetir la misma petición vuelve
      * a volar aunque el punto sea el mismo (el usuario pudo haber movido el
-     * mapa entre medias). El `place` interior sí debe salir de `PLACES`.
+     * mapa entre medias). El `place` interior sí debe salir de la lista de puntos.
      */
     target: { place: Place } | null
 }

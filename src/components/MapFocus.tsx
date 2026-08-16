@@ -1,13 +1,14 @@
 import { useEffect } from 'react'
 import { useMap } from 'react-leaflet'
-import { CITY_ZOOM } from '@/data/places'
+import { CITY_ZOOM } from '@/data/graphView'
 import type { City } from '@/types/place'
 
 interface MapFocusProps {
     /**
-     * Debe ser siempre un elemento de `CITIES`, nunca un objeto compuesto en
-     * render: el efecto depende de su identidad y una referencia nueva en cada
-     * pasada reiniciaría el vuelo continuamente.
+     * Debe ser siempre un elemento de la lista de ciudades (memoizada en
+     * `useEventGraph`), nunca un objeto compuesto en render: el efecto depende
+     * de su identidad y una referencia nueva en cada pasada reiniciaría el
+     * vuelo continuamente.
      */
     city: City | null
 }

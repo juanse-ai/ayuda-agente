@@ -1,45 +1,52 @@
 import type { LatLngTuple } from 'leaflet'
+import type { Urgency } from '@/types/graph'
 
-export type SocialPlatform = 'instagram' | 'x' | 'facebook' | 'tiktok'
-
-/** Si un punto reporta una necesidad (rojo) o una oferta de ayuda (verde). */
+/** Si un punto pide ayuda (rojo) o la ofrece (verde). */
 export type HelpKind = 'needed' | 'offered'
 
-export interface SocialPost {
+/**
+ * Una necesidad u oferta abierta, ya lista para pintar: cantidades formateadas
+ * y sin campos que la interfaz no use. Sale de `GraphRequirement`.
+ */
+export interface PlaceRequirement {
     id: string
-    /** Handle del autor, p. ej. '@vecinos.siloe'. */
-    author: string
-    platform: SocialPlatform
-    /** Etiqueta ya formateada, p. ej. 'hace 2 h'. */
-    postedAt: string
-    content: string
+    kind: HelpKind
+    /** Nombre del recurso, p. ej. 'Agua potable'. */
+    resource: string
+    /** Lo que decía el reporte original; cadena vacía si no venía nada. */
+    detail: string
+    urgency: Urgency
+    /** Pendiente ya formateado ('2600 L'), o null si nunca se dijo una cantidad. */
+    outstanding: string | null
 }
 
 /**
- * Un punto del mapa: un reporte de ayuda localizado dentro de una ciudad.
+ * Un punto del mapa: un actor del evento con sus necesidades u ofertas abiertas.
  *
  * `city` va denormalizado en vez de un `cityId` a propósito: el panel lateral
  * retiene el último punto durante la animación de salida, y resolver la ciudad
  * aparte obligaría a un segundo latch sincronizado.
  */
 export interface Place {
+    /** El id del actor en el backend, como cadena. */
     id: string
-    /** Barrio o sector, p. ej. 'Siloé'. */
+    /** Nombre del actor, p. ej. 'Consejo Comunitario La Yesquita'. */
     name: string
+    /** Unidad administrativa de su ubicación; 'Sin ubicación' si el backend no la trae. */
     city: string
-    /** Titular de la situación. */
+    /** Titular derivado de lo que pide u ofrece. */
     title: string
-    description: string
     /** Necesita ayuda o la ofrece; determina el color del punto en el mapa. */
     kind: HelpKind
     position: LatLngTuple
-    posts: SocialPost[]
+    requirements: PlaceRequirement[]
 }
 
-/** Destino del desplegable del header. */
+/** Destino del desplegable del header, derivado de las unidades administrativas. */
 export interface City {
     id: string
     name: string
+    /** Línea secundaria del menú: cuántos puntos hay en esa ubicación. */
     department: string
     position: LatLngTuple
 }

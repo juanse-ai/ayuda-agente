@@ -1,13 +1,12 @@
-import { useRef, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { ChatBar } from '@/components/ChatBar'
 import { ConnectionsGraph } from '@/components/connections/ConnectionsGraph'
 import { HelpLegend } from '@/components/HelpLegend'
 import { SidePanel } from '@/components/SidePanel'
-import { CHAT_FALLBACK, CONNECTIONS, GRAPH_LAYOUT, matchScenario } from '@/data/connections'
-import { PLACES } from '@/data/places'
-import { PLATFORMS } from '@/data/platforms'
-import type { ChatMessage } from '@/types/connection'
-import type { Place, SocialPlatform, SocialPost } from '@/types/place'
+import { findPlaceForText } from '@/lib/eventGraph'
+import { useAgentChat } from '@/lib/useAgentChat'
+import type { ChatMessage, Connection, GraphPoint } from '@/types/connection'
+import type { Place } from '@/types/place'
 
 /**
  * Un solo clic resalta el punto y sus emparejados y abre su panel a la vez.
@@ -18,54 +17,70 @@ import type { Place, SocialPlatform, SocialPost } from '@/types/place'
 type Selection =
     { status: 'idle' } | { status: 'highlighted'; placeId: string } | { status: 'panel'; placeId: string }
 
-/**
- * Respuesta sugerida al pulsar una publicación. Plantilla fija, sin IA: dos
- * variantes según si el punto pide ayuda o la ofrece.
- */
-function buildSuggestedReply(place: Place, post: SocialPost): string {
-    if (place.kind === 'needed') {
-        return `Hola ${post.author}, vi tu publicación sobre ${place.name}. Puedo ayudar con lo que describen, ¿cómo coordinamos?`
-    }
-    return `Hola ${post.author}, vi lo que ofrecen en ${place.name}. Conozco a quien le vendría muy bien, ¿cómo coordinamos?`
-}
-
 const GREETING: ChatMessage = {
     id: 'agente-saludo',
     from: 'agent',
     text: 'Hola, soy el agente de conexiones. Cuéntame cómo quieres ayudar (por ejemplo: "puedo llevar agua") y te muestro quién lo necesita.'
 }
 
+const OFFLINE_REPLY = 'Aun así te señalo en el grafo el punto que encaja con lo que escribiste.'
+
+interface ConnectionsViewProps {
+    eventId: number | null
+    /** Por qué el chat no puede enviar (grafo cargando o caído); undefined si todo va bien. */
+    blockedReason?: string
+    places: Place[]
+    connections: Connection[]
+    layout: Record<string, GraphPoint>
+}
+
 /**
  * La vista Conexiones completa: grafo + leyenda + chat + panel lateral.
  *
- * Todo el estado vive aquí, no en App: la vista se monta al activar la pestaña
- * y se desmonta al salir, así que arranca de cero cada visita (la animación de
- * entrada del grafo se repite a propósito). App no sabe nada de este estado.
- *
- * Toda la función es una maqueta sobre datos ficticios: el chat no entiende
- * lenguaje (busca palabras clave), el matching viene fijado en los datos y el
- * "envío" de respuestas no llama a ninguna red ni API.
+ * Su estado (selección, spotlight, conversación) vive aquí, no en App: la vista
+ * se monta al activar la pestaña y se desmonta al salir, así que arranca de cero
+ * cada visita (la animación de entrada del grafo se repite a propósito). Los
+ * datos, en cambio, bajan de App: son los mismos que pinta el mapa.
  */
-export function ConnectionsView() {
+export function ConnectionsView({
+    eventId,
+    blockedReason,
+    places,
+    connections,
+    layout
+}: ConnectionsViewProps) {
     const [selection, setSelection] = useState<Selection>({ status: 'idle' })
     // El spotlight (zoom del grafo) solo lo activa el chat; cualquier clic
     // manual lo apaga: la manipulación directa manda sobre la guiada.
     const [spotlightId, setSpotlightId] = useState<string | null>(null)
-    const [messages, setMessages] = useState<ChatMessage[]>([GREETING])
-    const [draft, setDraft] = useState('')
-    // Red de origen del borrador prellenado desde una publicación; null cuando
-    // el usuario escribe una petición libre.
-    const [draftVia, setDraftVia] = useState<SocialPlatform | null>(null)
 
-    const inputRef = useRef<HTMLInputElement>(null)
-    const messageIdRef = useRef(0)
-    const nextMessageId = () => `mensaje-${messageIdRef.current++}`
-
-    // Derivados en render, como en App. OJO: siempre el objeto de PLACES, nunca
+    // Derivados en render, como en App. OJO: siempre el objeto de `places`, nunca
     // uno compuesto — el latch interno de SidePanel depende de esa identidad.
     const selectedPlace =
-        selection.status === 'panel' ? (PLACES.find((place) => place.id === selection.placeId) ?? null) : null
+        selection.status === 'panel' ? (places.find((place) => place.id === selection.placeId) ?? null) : null
     const highlightedId = selection.status === 'idle' ? null : selection.placeId
+
+    // Igual que en el mapa: el agente contesta en prosa y no devuelve ids, así
+    // que el zoom lo decide el texto del usuario y no la respuesta.
+    const spotlightMatch = useCallback(
+        (text: string) => {
+            const place = findPlaceForText(text, places)
+            if (place === null) {
+                return
+            }
+            // Zoom al punto y panel abierto a la vez: es un solo gesto guiado.
+            setSpotlightId(place.id)
+            setSelection({ status: 'panel', placeId: place.id })
+        },
+        [places]
+    )
+
+    const { messages, draft, setDraft, send, isStreaming } = useAgentChat({
+        eventId,
+        greeting: GREETING,
+        onUserMessage: spotlightMatch,
+        offlineReply: OFFLINE_REPLY
+    })
 
     const handleDotClick = (placeId: string) => {
         setSpotlightId(null)
@@ -88,73 +103,14 @@ export function ConnectionsView() {
         )
     }
 
-    const handleDraftChange = (value: string) => {
-        setDraft(value)
-        // Si el usuario borra el prellenado, lo que escriba después es una
-        // petición libre, no una respuesta hacia una red.
-        if (value === '') {
-            setDraftVia(null)
-        }
-    }
-
-    const handleSelectPost = (post: SocialPost) => {
-        if (selectedPlace === null) {
-            return
-        }
-        setDraft(buildSuggestedReply(selectedPlace, post))
-        setDraftVia(post.platform)
-        inputRef.current?.focus()
-    }
-
-    const handleSend = () => {
-        const text = draft.trim()
-        if (text === '') {
-            return
-        }
-
-        if (draftVia !== null) {
-            // Respuesta prellenada: simulamos el envío a la red de origen.
-            setMessages((prev) => [
-                ...prev,
-                { id: nextMessageId(), from: 'user', text, sentVia: draftVia },
-                {
-                    id: nextMessageId(),
-                    from: 'agent',
-                    text: `Listo: tu respuesta quedó registrada como "${PLATFORMS[draftVia].replyAction}". Es una demo — no se envió nada real.`
-                }
-            ])
-            setDraft('')
-            setDraftVia(null)
-            return
-        }
-
-        const scenario = matchScenario(text)
-        setMessages((prev) => [
-            ...prev,
-            { id: nextMessageId(), from: 'user', text },
-            {
-                id: nextMessageId(),
-                from: 'agent',
-                text: scenario !== null ? scenario.response : CHAT_FALLBACK
-            }
-        ])
-        setDraft('')
-        if (scenario !== null) {
-            // Zoom al punto y panel abierto a la vez: el mensaje del agente ya
-            // anuncia que se abre el detalle.
-            setSpotlightId(scenario.placeId)
-            setSelection({ status: 'panel', placeId: scenario.placeId })
-        }
-    }
-
     return (
         // `isolate` crea un stacking context propio: el z-[1200] del panel y
         // los z bajos del grafo/chat no compiten con los del mapa ni el header.
         <section aria-label="Conexiones" className="bg-page absolute inset-0 isolate overflow-hidden">
             <ConnectionsGraph
-                places={PLACES}
-                connections={CONNECTIONS}
-                layout={GRAPH_LAYOUT}
+                places={places}
+                connections={connections}
+                layout={layout}
                 highlightedId={highlightedId}
                 spotlightId={spotlightId}
                 onSelectDot={handleDotClick}
@@ -164,11 +120,12 @@ export function ConnectionsView() {
             <ChatBar
                 messages={messages}
                 draft={draft}
-                onDraftChange={handleDraftChange}
-                onSend={handleSend}
-                inputRef={inputRef}
+                onDraftChange={setDraft}
+                onSend={() => void send()}
+                isStreaming={isStreaming}
+                blockedReason={blockedReason}
             />
-            <SidePanel place={selectedPlace} onClose={handleClosePanel} onSelectPost={handleSelectPost} />
+            <SidePanel place={selectedPlace} onClose={handleClosePanel} />
         </section>
     )
 }

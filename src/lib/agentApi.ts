@@ -1,0 +1,138 @@
+/**
+ * El protocolo del agente: una petición POST que se lee como un flujo de
+ * eventos. Sin React y sin estado — quien llama decide qué pintar con cada
+ * evento.
+ *
+ * `EventSource` no sabe hacer POST, así que se usa `fetch` y se lee el cuerpo a
+ * mano. Tampoco se usa `apiClient`: axios en el navegador acumula la respuesta
+ * entera antes de entregarla (adiós al streaming) y su timeout de 10 s cortaría
+ * un turno que legítimamente tarda 40. Del cliente base solo se toma el origen,
+ * que sigue viviendo en un único sitio.
+ */
+import { API_BASE_URL, API_HEADERS } from '@/lib/apiClient'
+
+/** Los dos agentes que expone el backend. */
+export type AgentName = 'coordination' | 'frontier'
+
+/** Resumen de lo que devolvió una herramienta: nunca las filas, solo el recuento. */
+interface ToolResult {
+    ok: boolean
+    count?: number
+    truncated?: boolean
+    [key: string]: unknown
+}
+
+/** Un evento del flujo. `type` discrimina: cada variante trae lo suyo y nada más. */
+export type AgentEvent =
+    | { type: 'start'; thread_id: string }
+    | { type: 'tool_start'; name: string; args: Record<string, unknown>; node: string }
+    | { type: 'tool_end'; name: string; result: ToolResult }
+    | { type: 'token'; text: string }
+    | { type: 'done'; thread_id: string }
+    | { type: 'error'; error: string }
+
+/**
+ * Nombre de herramienta → frase que se le enseña al usuario. Los `args` nunca
+ * se pintan: son ids y slugs internos.
+ */
+const TOOL_LABELS: Record<string, string> = {
+    get_balance: 'Comparando oferta y demanda',
+    find_requirements: 'Buscando necesidades y ofertas',
+    get_actor_contacts: 'Buscando cómo contactarles',
+    road_distance: 'Midiendo el trayecto real',
+    plan_trip_stops: 'Ordenando las paradas',
+    propose_match: 'Proponiendo un emparejamiento',
+    draft_outreach: 'Redactando un mensaje',
+    get_frontier: 'Revisando dónde mirar',
+    create_harvest_job: 'Encolando una búsqueda'
+}
+
+/** Frase del paso en curso; el nombre crudo si la herramienta es nueva. */
+export function toolLabel(name: string): string {
+    return TOOL_LABELS[name] ?? name
+}
+
+interface AskAgentOptions {
+    agent: AgentName
+    eventId: number
+    message: string
+    /** Omitir en el primer turno: el evento `start` trae el que hay que reutilizar. */
+    threadId: string | null
+    onEvent: (event: AgentEvent) => void
+    signal?: AbortSignal
+}
+
+/** Mensaje de error de una respuesta que falló antes de abrir el flujo. */
+async function readErrorMessage(response: Response): Promise<string> {
+    // Un 404 devuelve la página de Django, no JSON: parsear a ciegas escondería el fallo real.
+    try {
+        const body: unknown = await response.json()
+        if (typeof body === 'object' && body !== null && 'error' in body) {
+            return String((body as { error: unknown }).error)
+        }
+    } catch {
+        /* cuerpo no-JSON */
+    }
+    return `El servidor respondió ${response.status}.`
+}
+
+/**
+ * Ejecuta un turno de conversación y entrega sus eventos según llegan.
+ *
+ * Resuelve cuando el flujo termina. Todo fallo posterior a la apertura del
+ * flujo llega como un evento `error`, no como una excepción: el estado 200 ya
+ * se envió y los tokens recibidos hasta ahí siguen siendo válidos.
+ *
+ * @throws Error Si la petición falla antes de abrir el flujo (400, 404, 405, 503).
+ */
+export async function askAgent({
+    agent,
+    eventId,
+    message,
+    threadId,
+    onEvent,
+    signal
+}: AskAgentOptions): Promise<void> {
+    const response = await fetch(`${API_BASE_URL}/api/agent/${agent}/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...API_HEADERS },
+        body: JSON.stringify({ event_id: eventId, message, thread_id: threadId ?? undefined }),
+        signal
+    })
+
+    if (!response.ok || response.body === null) {
+        throw new Error(await readErrorMessage(response))
+    }
+
+    const reader = response.body.getReader()
+    const decoder = new TextDecoder()
+    // Un trozo de red puede partir un evento por la mitad: se acumula y solo se
+    // parsea lo que ya está cerrado por una línea en blanco.
+    let buffer = ''
+
+    while (true) {
+        const { value, done } = await reader.read()
+        if (done) {
+            break
+        }
+        buffer += decoder.decode(value, { stream: true })
+
+        const parts = buffer.split('\n\n')
+        buffer = parts.pop() ?? ''
+        for (const part of parts) {
+            const line = part.trim()
+            if (!line.startsWith('data: ')) {
+                continue
+            }
+            const event = JSON.parse(line.slice(6)) as AgentEvent
+            onEvent(event)
+            // `done` y `error` son terminales: el turno acabó, no hay nada más que
+            // esperar. Sin esto una conexión que el servidor no cierra —o que un
+            // proxy mantiene viva— deja la barra bloqueada para siempre.
+            if (event.type === 'done' || event.type === 'error') {
+                await reader.cancel()
+                return
+            }
+        }
+    }
+}

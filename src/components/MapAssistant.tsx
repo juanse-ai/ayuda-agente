@@ -1,65 +1,54 @@
-import { useRef, useState } from 'react'
+import { useCallback } from 'react'
 import { ChatBar } from '@/components/ChatBar'
-import { CHAT_FALLBACK, matchScenario } from '@/data/connections'
-import { PLACES } from '@/data/places'
-import type { ChatMessage } from '@/types/connection'
+import { findPlaceForText } from '@/lib/eventGraph'
+import { useAgentChat } from '@/lib/useAgentChat'
 import type { Place } from '@/types/place'
 
 interface MapAssistantProps {
+    eventId: number | null
+    /** Por qué el chat no puede enviar (grafo cargando o caído); undefined si todo va bien. */
+    blockedReason?: string
+    places: Place[]
     /** Reporta el punto encontrado; App decide volar hacia él y abrir su detalle. */
     onMatch: (place: Place) => void
 }
 
-const GREETING: ChatMessage = {
-    id: 'agente-saludo-mapa',
-    from: 'agent',
-    text: 'Hola, soy el agente del mapa. Cuéntame cómo quieres ayudar (por ejemplo: "puedo llevar agua") y te llevo al punto que lo necesita.'
-}
+const OFFLINE_REPLY = 'Aun así te llevo al punto del mapa que encaja con lo que escribiste.'
 
 /**
- * El chat de la pestaña Mapa. Reutiliza la ChatBar y el matching por palabras
- * clave de Conexiones, pero su acierto se traduce en volar el mapa al punto en
- * vez de hacer zoom sobre el grafo. Sigue la regla del README: reporta el
- * punto encontrado pero no lo almacena ni conoce Leaflet — App conecta ambos.
- *
- * Como todo el chat, es una maqueta: sin IA, sin geolocalización real y sin
- * llamadas a APIs.
+ * El chat de la pestaña Mapa. La respuesta la escribe el agente de coordinación
+ * del backend; el encuadre lo decide `findPlaceForText` sobre los puntos reales,
+ * porque el agente contesta en prosa y nunca devuelve el id de un punto. Sigue
+ * la regla del README: reporta el punto encontrado pero no lo almacena ni conoce
+ * Leaflet — App conecta ambos.
  */
-export function MapAssistant({ onMatch }: MapAssistantProps) {
-    const [messages, setMessages] = useState<ChatMessage[]>([GREETING])
-    const [draft, setDraft] = useState('')
-
-    const messageIdRef = useRef(0)
-    const nextMessageId = () => `mensaje-mapa-${messageIdRef.current++}`
-
-    const handleSend = () => {
-        const text = draft.trim()
-        if (text === '') {
-            return
-        }
-
-        const scenario = matchScenario(text)
-        // Invariante de connections.ts: todo placeId de un escenario existe en PLACES.
-        const place = scenario !== null ? (PLACES.find((p) => p.id === scenario.placeId) ?? null) : null
-
-        setMessages((prev) => [
-            ...prev,
-            { id: nextMessageId(), from: 'user', text },
-            {
-                id: nextMessageId(),
-                from: 'agent',
-                text:
-                    place !== null
-                        ? `Encontré un punto que encaja: ${place.title}. ${place.description} Te llevo al punto y te abro su detalle.`
-                        : CHAT_FALLBACK
+export function MapAssistant({ eventId, blockedReason, places, onMatch }: MapAssistantProps) {
+    // Se vuela al enviar, sin esperar la respuesta: el mapa se mueve mientras el
+    // agente piensa, que es justo la señal de que la petición se entendió.
+    const flyToMatch = useCallback(
+        (text: string) => {
+            const place = findPlaceForText(text, places)
+            if (place !== null) {
+                onMatch(place)
             }
-        ])
-        setDraft('')
+        },
+        [onMatch, places]
+    )
 
-        if (place !== null) {
-            onMatch(place)
-        }
-    }
+    const { messages, draft, setDraft, send, isStreaming } = useAgentChat({
+        eventId,
+        onUserMessage: flyToMatch,
+        offlineReply: OFFLINE_REPLY
+    })
 
-    return <ChatBar messages={messages} draft={draft} onDraftChange={setDraft} onSend={handleSend} />
+    return (
+        <ChatBar
+            messages={messages}
+            draft={draft}
+            onDraftChange={setDraft}
+            onSend={() => void send()}
+            isStreaming={isStreaming}
+            blockedReason={blockedReason}
+        />
+    )
 }

@@ -1,6 +1,8 @@
+import { EventMenu } from '@/components/EventMenu'
 import { LocationMenu } from '@/components/LocationMenu'
 import { MusicToggle } from '@/components/MusicToggle'
 import { cn } from '@/lib/utils'
+import type { EventBrief, EventSummary } from '@/types/graph'
 import type { City } from '@/types/place'
 
 /** Vistas de nivel superior de la app. Exactamente estas dos. */
@@ -12,14 +14,28 @@ const TABS: { id: AppTab; label: string }[] = [
 ]
 
 interface AppHeaderProps {
+    events: EventBrief[]
+    selectedEventId: number | null
+    eventSummary: EventSummary | null
     cities: City[]
     focusedId: string | null
     activeTab: AppTab
+    onSelectEvent: (eventId: number) => void
     onFocusCity: (cityId: string) => void
     onSelectTab: (tab: AppTab) => void
 }
 
-export function AppHeader({ cities, focusedId, activeTab, onFocusCity, onSelectTab }: AppHeaderProps) {
+export function AppHeader({
+    events,
+    selectedEventId,
+    eventSummary,
+    cities,
+    focusedId,
+    activeTab,
+    onSelectEvent,
+    onFocusCity,
+    onSelectTab
+}: AppHeaderProps) {
     return (
         // `relative z-[1300]` para que el menú desplegable se pinte por encima
         // del mapa y del panel lateral, que vienen después en el DOM.
@@ -55,9 +71,17 @@ export function AppHeader({ cities, focusedId, activeTab, onFocusCity, onSelectT
                 ))}
             </div>
             <div className="flex shrink-0 items-center gap-2">
-                {/* El menú solo mueve la cámara del mapa. En Conexiones se oculta
-                    con visibility (no display) para no dejar hueco ni desplazar
-                    las pestañas; `inert` lo saca del tab-order mientras tanto. */}
+                {/* La emergencia es el ámbito de todo —mapa, grafo y los dos
+                    chats—, así que su selector no se esconde en ninguna pestaña. */}
+                <EventMenu
+                    events={events}
+                    selectedId={selectedEventId}
+                    summary={eventSummary}
+                    onSelect={onSelectEvent}
+                />
+                {/* El de ubicaciones solo mueve la cámara del mapa. En Conexiones
+                    se oculta con visibility (no display) para no dejar hueco ni
+                    desplazar las pestañas; `inert` lo saca del tab-order. */}
                 <div className={cn(activeTab !== 'mapa' && 'invisible')} inert={activeTab !== 'mapa'}>
                     <LocationMenu cities={cities} focusedId={focusedId} onFocusCity={onFocusCity} />
                 </div>
