@@ -1,10 +1,8 @@
 import { EventMenu } from '@/components/EventMenu'
 import { FailFastLink } from '@/components/FailFastLink'
-import { LocationMenu } from '@/components/LocationMenu'
 import { MusicToggle } from '@/components/MusicToggle'
 import { cn } from '@/lib/utils'
 import type { EventBrief, EventSummary } from '@/types/graph'
-import type { City } from '@/types/place'
 
 /** Vistas de nivel superior de la app. Exactamente estas doDDDs. */
 export type AppTab = 'mapa' | 'conexiones'
@@ -18,11 +16,8 @@ interface AppHeaderProps {
     events: EventBrief[]
     selectedEventId: number | null
     eventSummary: EventSummary | null
-    cities: City[]
-    focusedId: string | null
     activeTab: AppTab
     onSelectEvent: (eventId: number) => void
-    onFocusCity: (cityId: string) => void
     onSelectTab: (tab: AppTab) => void
 }
 
@@ -30,11 +25,8 @@ export function AppHeader({
     events,
     selectedEventId,
     eventSummary,
-    cities,
-    focusedId,
     activeTab,
     onSelectEvent,
-    onFocusCity,
     onSelectTab
 }: AppHeaderProps) {
     return (
@@ -89,9 +81,9 @@ export function AppHeader({
                 ))}
             </div>
             {/* Los mandos del evento. En un teléfono no caben en la barra —logo,
-                pestañas y los dos menús pasan de 500 px—, así que por debajo de
-                `sm` salen de ella y flotan justo debajo, sobre el mapa, a ancho
-                completo y con cada menú ocupando la mitad. Siguen viviendo aquí y
+                pestañas y el menú pasan de 500 px—, así que por debajo de `sm`
+                salen de ella y flotan justo debajo, sobre el mapa, a ancho
+                completo. Siguen viviendo aquí y
                 no en App para no duplicar el grupo ni sus props: basta con
                 sacarlos del flujo. `pointer-events` sigue el patrón de ChatBar —
                 la franja no debe robarle al mapa el arrastre entre pastilla y
@@ -107,10 +99,6 @@ export function AppHeader({
                         onSelect={onSelectEvent}
                     />
                 </div>
-                {/* El de ubicaciones solo mueve la cámara del mapa. En Conexiones
-                    se oculta con visibility (no display) para no dejar hueco ni
-                    desplazar el resto de mandos; `inert` lo saca del tab-order. */}
-            
                 {/* La música es global: el botón sigue visible en todas las pestañas. */}
                 <div className="pointer-events-auto">
                     <MusicToggle />

@@ -65,13 +65,6 @@ export default function App() {
         setSelectedId(matched[0].id)
     }, [])
 
-    // Cambiar de ciudad cierra el detalle: el punto abierto casi nunca está en
-    // el nuevo encuadre, y dejarlo abierto se lee como un error.
-    const handleFocusCity = useCallback((cityId: string) => {
-        setFocusedCityId(cityId)
-        setSelectedId(null)
-    }, [])
-
     // Cambiar de pestaña también lo cierra, por la misma razón: al volver, un
     // panel abierto sobre un contexto viejo se lee como un error.
     const handleSelectTab = useCallback((tab: AppTab) => {
@@ -99,11 +92,8 @@ export default function App() {
                 events={events}
                 selectedEventId={eventId}
                 eventSummary={summary}
-                cities={cities}
-                focusedId={focusedCityId}
                 activeTab={activeTab}
                 onSelectEvent={handleSelectEvent}
-                onFocusCity={handleFocusCity}
                 onSelectTab={handleSelectTab}
             />
             <main className="relative overflow-hidden">
