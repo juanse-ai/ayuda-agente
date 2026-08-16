@@ -3,8 +3,9 @@ import { ChatBar } from '@/components/ChatBar'
 import { ConnectionsGraph } from '@/components/connections/ConnectionsGraph'
 import { HelpLegend } from '@/components/HelpLegend'
 import { SidePanel } from '@/components/SidePanel'
-import { findPlaceForText } from '@/lib/eventGraph'
+import { findPlacesForAnswer } from '@/lib/eventGraph'
 import { useAgentChat } from '@/lib/useAgentChat'
+import type { AgentAnswer } from '@/lib/useAgentChat'
 import type { Connection, GraphPoint } from '@/types/connection'
 import type { Place } from '@/types/place'
 
@@ -17,7 +18,7 @@ import type { Place } from '@/types/place'
 type Selection =
     { status: 'idle' } | { status: 'highlighted'; placeId: string } | { status: 'panel'; placeId: string }
 
-const OFFLINE_REPLY = 'Aun así te señalo en el grafo el punto que encaja con lo que escribiste.'
+const OFFLINE_REPLY = 'Aun así intento señalarte en el grafo el punto que encaja con lo que escribiste.'
 
 /**
  * Hueco que necesita un punto para leerse como un punto, en unidades del
@@ -126,11 +127,12 @@ export function ConnectionsView({
     layout
 }: ConnectionsViewProps) {
     const [selection, setSelection] = useState<Selection>({ status: 'idle' })
-    // El spotlight (el vuelo de cámara hacia un punto) solo lo activa el chat;
+    // El spotlight (el vuelo de cámara hacia lo señalado) solo lo activa el chat;
     // cualquier clic manual lo apaga: la manipulación directa manda sobre la
     // guiada. Apagarlo no devuelve la cámara a donde estaba — el grafo se
     // recorre a mano, y deshacer ese recorrido sería quitárselo de debajo.
-    const [spotlightId, setSpotlightId] = useState<string | null>(null)
+    // Envoltorio nuevo por respuesta: ver ConnectionsGraph sobre su identidad.
+    const [spotlight, setSpotlight] = useState<{ ids: string[] } | null>(null)
 
     // El encuadre del grafo es cosa de esta vista, no de los datos: el mapa
     // quiere la geografía tal cual y aquí hace falta aire entre los puntos para
@@ -144,43 +146,44 @@ export function ConnectionsView({
         selection.status === 'panel' ? (places.find((place) => place.id === selection.placeId) ?? null) : null
     const highlightedId = selection.status === 'idle' ? null : selection.placeId
 
-    // Igual que en el mapa: el agente contesta en prosa y no devuelve ids, así
-    // que el zoom lo decide el texto del usuario y no la respuesta.
-    const spotlightMatch = useCallback(
-        (text: string) => {
-            const place = findPlaceForText(text, places)
-            if (place === null) {
+    // Igual que en el mapa: se mira a dónde apuntó la respuesta, no la pregunta, y el panel
+    // solo se abre cuando hay un único punto — con varios habría que elegir uno.
+    const spotlightAnswer = useCallback(
+        (answer: AgentAnswer) => {
+            const matched = findPlacesForAnswer({ ...answer, places })
+            if (matched.length === 0) {
                 return
             }
-            // Zoom al punto y panel abierto a la vez: es un solo gesto guiado.
-            setSpotlightId(place.id)
-            setSelection({ status: 'panel', placeId: place.id })
+            setSpotlight({ ids: matched.map((place) => place.id) })
+            setSelection(
+                matched.length === 1 ? { status: 'panel', placeId: matched[0].id } : { status: 'idle' }
+            )
         },
         [places]
     )
 
     const { messages, draft, setDraft, send, isStreaming } = useAgentChat({
         eventId,
-        onUserMessage: spotlightMatch,
+        onAnswer: spotlightAnswer,
         offlineReply: OFFLINE_REPLY
     })
 
     const handleDotClick = (placeId: string) => {
-        setSpotlightId(null)
+        setSpotlight(null)
         setSelection((prev) =>
             prev.status === 'panel' && prev.placeId === placeId ? prev : { status: 'panel', placeId }
         )
     }
 
     const handleClearSelection = () => {
-        setSpotlightId(null)
+        setSpotlight(null)
         setSelection({ status: 'idle' })
     }
 
     // Cerrar el panel conserva el resaltado: el usuario suele querer seguir
     // mirando ese cúmulo; otro clic en el fondo ya despeja todo.
     const handleClosePanel = () => {
-        setSpotlightId(null)
+        setSpotlight(null)
         setSelection((prev) =>
             prev.status === 'panel' ? { status: 'highlighted', placeId: prev.placeId } : prev
         )
@@ -199,7 +202,7 @@ export function ConnectionsView({
                 connections={connections}
                 layout={spacedLayout}
                 highlightedId={highlightedId}
-                spotlightId={spotlightId}
+                spotlight={spotlight}
                 onSelectDot={handleDotClick}
                 onClearSelection={handleClearSelection}
             />

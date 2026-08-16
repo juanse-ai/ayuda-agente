@@ -236,6 +236,11 @@ function keywords(place: Place): string[] {
     ])
 }
 
+/** Si un texto ya normalizado contiene alguna de esas palabras. */
+function mentions(haystack: string, words: string[]): boolean {
+    return words.some((word) => haystack.includes(word))
+}
+
 /** Palabras del reporte original: menos precisas, pero es como habla la gente. */
 function detailWords(place: Place): string[] {
     return splitWords(place.requirements.map((requirement) => requirement.detail))
@@ -248,25 +253,107 @@ function splitWords(terms: string[]): string[] {
 }
 
 /**
- * A qué punto llevar la cámara con lo que escribió el usuario.
+ * A qué punto llevar la cámara con un texto suelto, sin más pistas.
  *
- * El agente contesta en prosa y nunca devuelve el id de un punto, así que el
- * encuadre lo decide el propio texto. Se compara palabra a palabra, no la
- * frase entera: "puedo llevar agua" tiene que reconocer un recurso que en el
- * backend se llama "Agua potable". Ante un empate gana quien necesita ayuda —
- * quien ofrece quiere ver dónde falta, no quién más está ofreciendo.
+ * Es el último recurso de `findPlacesForAnswer`: se usa cuando el turno no señaló ningún id
+ * —el agente contestó de memoria, o el servidor no llegó a responder—. Se compara palabra a
+ * palabra, no la frase entera: "puedo llevar agua" tiene que reconocer un recurso que en el
+ * backend se llama "Agua potable". Ante un empate gana quien necesita ayuda — quien ofrece
+ * quiere ver dónde falta, no quién más está ofreciendo.
  */
 export function findPlaceForText(text: string, places: Place[]): Place | null {
     const haystack = normalize(text)
     const pick = (candidates: Place[]) =>
         candidates.find((place) => place.kind === 'needed') ?? candidates[0] ?? null
 
-    const byKeyword = places.filter((place) => keywords(place).some((word) => haystack.includes(word)))
+    const byKeyword = places.filter((place) => mentions(haystack, keywords(place)))
     if (byKeyword.length > 0) {
         return pick(byKeyword)
     }
     // Segundo intento sobre el texto del reporte: "palas" o "incendio" salen ahí,
     // no en el nombre del recurso. Menos preciso, pero mover el mapa a un punto
     // parecido informa más que no moverlo.
-    return pick(places.filter((place) => detailWords(place).some((word) => haystack.includes(word))))
+    return pick(places.filter((place) => mentions(haystack, detailWords(place))))
+}
+
+/**
+ * Tope de puntos que se encuadran a la vez. Pasado eso el encuadre es el país entero, que no
+ * señala nada; se conservan los primeros, que es como los ordenó la herramienta.
+ */
+const MAX_FOCUS_PLACES = 8
+
+interface AnswerFocus {
+    /** Ids de actor que tocaron las herramientas, en orden de relevancia. */
+    actorIds: string[]
+    /** Ids de necesidad u oferta; llegan de `propose_match` y `check_coverage`. */
+    requirementIds: string[]
+    /** La respuesta del agente, para decidir de cuál de los candidatos está hablando. */
+    text: string
+    /** Lo que se preguntó; solo se mira si no queda nada más. */
+    question: string
+    places: Place[]
+}
+
+/** Los puntos que nombran esos ids, sin repetir y respetando el orden de llegada. */
+function resolveIds(actorIds: string[], requirementIds: string[], places: Place[]): Place[] {
+    const byActor = new Map(places.map((place) => [place.id, place]))
+    const byRequirement = new Map<string, Place>()
+    for (const place of places) {
+        for (const requirement of place.requirements) {
+            byRequirement.set(requirement.id, place)
+        }
+    }
+
+    const found: Place[] = []
+    const ids = [
+        ...actorIds.map((id) => byActor.get(id)),
+        ...requirementIds.map((id) => byRequirement.get(id))
+    ]
+    for (const place of ids) {
+        // Un id sin punto es lo normal: el actor puede no tener coordenadas, tenerlas
+        // demasiado gruesas o no tener nada abierto, y entonces el mapa no lo dibuja.
+        if (place !== undefined && !found.includes(place)) {
+            found.push(place)
+        }
+    }
+    return found
+}
+
+/**
+ * Qué puntos encuadrar cuando el agente termina de contestar.
+ *
+ * Los ids del flujo dicen qué miró el agente, que no es lo mismo que de qué está hablando:
+ * una consulta sobre doce candidatos devuelve doce y luego escribe una frase sobre dos. Así
+ * que primero se resuelven los ids —eso ya acota a lo que existe en el mapa— y después se
+ * mira la prosa para quedarse con los que nombra, primero por nombre propio y, si ninguno
+ * aparece, por ciudad o recurso. Si la respuesta no nombra a ninguno vale el conjunto
+ * entero: resumió sin señalar, y enseñar todo lo que miró es fiel a eso.
+ *
+ * Sin ids resueltos queda el respaldo por texto, que es lo que hacía esto antes de que el
+ * backend los mandara. Devolver una lista vacía significa no mover la cámara: inventarse un
+ * destino es peor que quedarse quieto.
+ */
+export function findPlacesForAnswer({
+    actorIds,
+    requirementIds,
+    text,
+    question,
+    places
+}: AnswerFocus): Place[] {
+    const found = resolveIds(actorIds, requirementIds, places)
+    if (found.length === 0) {
+        const guess = findPlaceForText(text, places) ?? findPlaceForText(question, places)
+        return guess === null ? [] : [guess]
+    }
+    if (found.length === 1) {
+        return found
+    }
+
+    const haystack = normalize(text)
+    const byName = found.filter((place) => mentions(haystack, splitWords([place.name])))
+    if (byName.length > 0) {
+        return byName.slice(0, MAX_FOCUS_PLACES)
+    }
+    const byKeyword = found.filter((place) => mentions(haystack, keywords(place)))
+    return (byKeyword.length > 0 ? byKeyword : found).slice(0, MAX_FOCUS_PLACES)
 }

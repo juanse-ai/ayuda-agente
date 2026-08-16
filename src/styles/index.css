@@ -269,6 +269,15 @@ body {
     box-shadow: 0 0 0 6px color-mix(in srgb, var(--marker-color) 22%, transparent);
 }
 
+/* Los varios puntos de los que habló el agente. Más discreto que `--selected`, que es el
+   único que está abierto: el halo dice "de estos hablo", no "este". */
+.leaflet-container .ayuda-marker--focused > span {
+    box-shadow:
+        0 0 0 4px color-mix(in srgb, var(--marker-color) 45%, transparent),
+        0 0 0 10px color-mix(in srgb, var(--marker-color) 18%, transparent);
+    transform: scale(1.1);
+}
+
 .leaflet-container .ayuda-marker--selected > span {
     background: var(--color-fg);
     box-shadow:

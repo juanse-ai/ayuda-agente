@@ -28,6 +28,13 @@ export type AgentEvent =
     | { type: 'start'; thread_id: string }
     | { type: 'tool_start'; name: string; args: Record<string, unknown>; node: string }
     | { type: 'tool_end'; name: string; result: ToolResult }
+    /**
+     * Las filas que tocó una herramienta, con los mismos ids que dibuja
+     * `GET /events/<id>/graph/`: `actors` contra los nodos y `requirements` contra sus
+     * necesidades. Es lo que el agente *miró*, no lo que concluyó — cuál de ellos es el
+     * de la frase lo decide quien lo consume.
+     */
+    | { type: 'focus'; name: string; actors: number[]; requirements: number[] }
     | { type: 'token'; text: string }
     | { type: 'done'; thread_id: string }
     | { type: 'error'; error: string }

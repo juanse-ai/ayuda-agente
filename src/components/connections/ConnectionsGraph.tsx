@@ -13,7 +13,12 @@ interface ConnectionsGraphProps {
     connections: Connection[]
     layout: Record<string, GraphPoint>
     highlightedId: string | null
-    spotlightId: string | null
+    /**
+     * Los puntos de los que habló la última respuesta del agente. Envoltorio nuevo en cada
+     * respuesta a propósito, igual que en MapSpotlight: su identidad es lo que dispara el
+     * vuelo, así repetir la misma pregunta vuelve a encuadrar aunque los puntos no cambien.
+     */
+    spotlight: { ids: string[] } | null
     onSelectDot: (placeId: string) => void
     onClearSelection: () => void
 }
@@ -96,7 +101,7 @@ export function ConnectionsGraph({
     connections,
     layout,
     highlightedId,
-    spotlightId,
+    spotlight,
     onSelectDot,
     onClearSelection
 }: ConnectionsGraphProps) {
@@ -198,25 +203,31 @@ export function ConnectionsGraph({
 
     const fitAll = useCallback(() => fitTo(Object.values(layout), CHROME_INSETS), [fitTo, layout])
 
-    // El spotlight es el único encuadre que no pide el usuario con la mano: el
-    // chat acertó un punto y la cámara vuela hasta él. Apagarlo (un clic en
-    // cualquier sitio) ya no devuelve la cámara a su sitio; deshacer un vuelo
-    // que el usuario ya continuó a mano sería quitarle el grafo de debajo.
+    // El spotlight es el único encuadre que no pide el usuario con la mano: el agente
+    // contestó y la cámara vuela a lo que señaló. Apagarlo (un clic en cualquier sitio) ya
+    // no devuelve la cámara a su sitio; deshacer un vuelo que el usuario ya continuó a mano
+    // sería quitarle el grafo de debajo.
+    //
+    // Con un punto se acerca a él y el panel se abre a la vez, así que se centra en lo que
+    // queda a su izquierda y no debajo del panel. Con varios se encuadran todos: acercarse a
+    // uno de ellos afirmaría que es *el* punto, y no hay panel que esquivar.
+    // El pulso los marca a todos: con varios, el encuadre solo dice "por aquí".
+    const spotlightSet = useMemo(() => new Set(spotlight?.ids ?? []), [spotlight])
+
     useEffect(() => {
-        if (spotlightId === null) {
+        const points = (spotlight?.ids ?? []).map((id) => layout[id]).filter((point) => point !== undefined)
+        if (points.length === 0) {
             return
         }
-        const target = layout[spotlightId]
-        if (target === undefined) {
+        if (points.length === 1) {
+            focusOn(points[0], SPOTLIGHT_SCALE, {
+                ...CHROME_INSETS,
+                right: window.innerWidth >= PANEL_BREAKPOINT ? PANEL_WIDTH : CHROME_INSETS.right
+            })
             return
         }
-        focusOn(target, SPOTLIGHT_SCALE, {
-            ...CHROME_INSETS,
-            // El vuelo abre el panel lateral a la vez, así que el punto se
-            // centra en lo que queda a su izquierda y no debajo de él.
-            right: window.innerWidth >= PANEL_BREAKPOINT ? PANEL_WIDTH : CHROME_INSETS.right
-        })
-    }, [spotlightId, layout, focusOn])
+        fitTo(points, CHROME_INSETS)
+    }, [spotlight, layout, focusOn, fitTo])
 
     /**
      * Qué punto se apretó, y abrirlo al soltar si el gesto no fue un arrastre.
@@ -409,7 +420,7 @@ export function ConnectionsGraph({
                         className="conexiones-nodo focus-visible:outline-brand transition-opacity duration-300 outline-none focus-visible:outline-2 focus-visible:outline-offset-4"
                         style={{ opacity: isDimmed ? 0.12 : 1 }}
                     >
-                        {place.id === spotlightId ? (
+                        {spotlightSet.has(place.id) ? (
                             <circle
                                 r={10}
                                 fill="none"
@@ -436,7 +447,7 @@ export function ConnectionsGraph({
             scatterById,
             connectedIds,
             highlightedId,
-            spotlightId,
+            spotlightSet,
             hasDragged,
             onSelectDot,
             ensureVisible

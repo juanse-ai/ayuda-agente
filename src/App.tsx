@@ -41,10 +41,10 @@ export default function App() {
     // Dos ejes independientes: qué ciudad encuadra el mapa y qué punto está abierto.
     const [focusedCityId, setFocusedCityId] = useState<string | null>(null)
     const [selectedId, setSelectedId] = useState<string | null>(null)
-    // Objetivo del chat del mapa. Envoltorio nuevo en cada acierto a propósito:
+    // Objetivo del chat del mapa. Envoltorio nuevo en cada respuesta a propósito:
     // su identidad es lo que dispara el vuelo en MapSpotlight, así repetir la
-    // misma petición vuelve a volar aunque el punto no cambie.
-    const [spotlight, setSpotlight] = useState<{ place: Place } | null>(null)
+    // misma petición vuelve a volar aunque los puntos no cambien.
+    const [spotlight, setSpotlight] = useState<{ places: Place[] } | null>(null)
 
     // Derivados en render — no hace falta ningún efecto para mantenerlos al día.
     const focusedCity = cities.find((city) => city.id === focusedCityId) ?? null
@@ -53,11 +53,15 @@ export default function App() {
     const handleSelectPlace = useCallback((placeId: string) => setSelectedId(placeId), [])
     const handleClose = useCallback(() => setSelectedId(null), [])
 
-    // Acierto del chat del mapa: volar al punto y abrir su detalle, el mismo
-    // par zoom + panel que usa Conexiones con su spotlight.
-    const handleChatMatch = useCallback((place: Place) => {
-        setSpotlight({ place })
-        setSelectedId(place.id)
+    // Lo que señaló la respuesta del agente: volar hacia ello y, solo si es un punto,
+    // abrir su detalle. Con varios el panel tendría que elegir uno, y elegirlo por su
+    // cuenta afirmaría algo que el agente no dijo.
+    const handleChatMatch = useCallback((matched: Place[]) => {
+        if (matched.length === 0) {
+            return
+        }
+        setSpotlight({ places: matched })
+        setSelectedId(matched.length === 1 ? matched[0].id : null)
     }, [])
 
     // Cambiar de ciudad cierra el detalle: el punto abierto casi nunca está en

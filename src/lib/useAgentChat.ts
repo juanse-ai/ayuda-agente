@@ -4,14 +4,29 @@ import { useUserLocation } from '@/lib/useUserLocation'
 import type { AgentName } from '@/lib/agentApi'
 import type { ChatMessage } from '@/types/connection'
 
+/**
+ * El turno terminado: qué contestó el agente y a qué apuntó por el camino.
+ *
+ * Los ids llegan en el orden en que los devolvieron las herramientas —lo más cerca o lo más
+ * urgente primero— y ya como texto: las vistas no ven números del backend.
+ */
+export interface AgentAnswer {
+    /** Lo que se preguntó. Es el último recurso cuando la respuesta no señala nada. */
+    question: string
+    /** La respuesta entera, ya concatenada. Vacía si el turno se cayó antes del primer token. */
+    text: string
+    actorIds: string[]
+    requirementIds: string[]
+}
+
 interface UseAgentChatOptions {
     /** Emergencia a la que se acota todo; null mientras el grafo aún carga. */
     eventId: number | null
     /** Primera burbuja, la que ya está en pantalla antes de escribir nada; sin ella la conversación arranca vacía. */
     greeting?: ChatMessage
     agent?: AgentName
-    /** Se llama con el texto enviado, antes de la respuesta: la vista mueve mapa o grafo. */
-    onUserMessage?: (text: string) => void
+    /** Se llama una vez al acabar el turno: la vista mueve mapa o grafo hacia lo que se dijo. */
+    onAnswer?: (answer: AgentAnswer) => void
     /** Qué añadir cuando no hay backend, para que la demo siga diciendo algo útil. */
     offlineReply?: string
 }
@@ -38,12 +53,17 @@ function describeFailure(error: unknown): string {
  * La ubicación se pide aquí y no en las vistas por lo mismo: es parte de la
  * petición, y las dos pestañas la mandarían igual. Se adjunta la última conocida
  * en cada turno, así que "cerca de mí" sigue al coordinador si se mueve.
+ *
+ * Lo que el turno señaló se acumula aquí y se entrega de una vez en `onAnswer`, al final.
+ * Los ids van llegando a mitad de turno, pero el agente todavía puede llamar a otra
+ * herramienta y cambiar de asunto: una vista que se moviera con cada `focus` seguiría su
+ * razonamiento en vez de su respuesta.
  */
 export function useAgentChat({
     eventId,
     greeting,
     agent = 'coordination',
-    onUserMessage,
+    onAnswer,
     offlineReply
 }: UseAgentChatOptions) {
     const [messages, setMessages] = useState<ChatMessage[]>(greeting === undefined ? [] : [greeting])
@@ -57,6 +77,23 @@ export function useAgentChat({
     const abortRef = useRef<AbortController | null>(null)
     const messageIdRef = useRef(0)
     const nextMessageId = () => `mensaje-${messageIdRef.current++}`
+
+    // Lo que va señalando el turno en curso. En refs y no en estado: no se pinta nada con
+    // ello, y guardarlo en estado repintaría el chat por cada evento del flujo.
+    const answerRef = useRef('')
+    const focusRef = useRef<{ actors: string[]; requirements: string[] }>({
+        actors: [],
+        requirements: []
+    })
+
+    /** Añade ids nuevos conservando el orden de llegada; el mismo actor puede salir en varias herramientas. */
+    const rememberFocus = (into: string[], ids: number[]) => {
+        for (const id of ids.map(String)) {
+            if (!into.includes(id)) {
+                into.push(id)
+            }
+        }
+    }
 
     // Salir de la vista corta la petición en curso.
     useEffect(() => () => abortRef.current?.abort(), [])
@@ -85,7 +122,9 @@ export function useAgentChat({
         ])
         setDraft('')
         setIsStreaming(true)
-        onUserMessage?.(text)
+        // Lo del turno anterior no dice nada de este.
+        answerRef.current = ''
+        focusRef.current = { actors: [], requirements: [] }
 
         const controller = new AbortController()
         abortRef.current = controller
@@ -106,7 +145,13 @@ export function useAgentChat({
                             break
                         // Los tokens son fragmentos, no frases: se concatenan tal cual.
                         case 'token':
+                            answerRef.current += event.text
                             updateLast((message) => ({ ...message, text: message.text + event.text }))
+                            break
+                        // No se pinta: es a qué apuntar cuando acabe el turno.
+                        case 'focus':
+                            rememberFocus(focusRef.current.actors, event.actors)
+                            rememberFocus(focusRef.current.requirements, event.requirements)
                             break
                         case 'tool_start':
                             updateLast((message) => ({ ...message, step: toolLabel(event.name) }))
@@ -141,12 +186,21 @@ export function useAgentChat({
             }
         } finally {
             abortRef.current = null
+            // Un turno abortado no informa a nadie: quien lo cortó ya no está mirando.
             if (!controller.signal.aborted) {
                 updateLast((message) => ({ ...message, step: undefined, pending: false }))
                 setIsStreaming(false)
+                // También tras un fallo: media respuesta, o la propia pregunta, todavía
+                // pueden señalar un punto, y moverse hacia él sigue informando.
+                onAnswer?.({
+                    question: text,
+                    text: answerRef.current,
+                    actorIds: focusRef.current.actors,
+                    requirementIds: focusRef.current.requirements
+                })
             }
         }
-    }, [agent, draft, eventId, isStreaming, location, offlineReply, onUserMessage, updateLast])
+    }, [agent, draft, eventId, isStreaming, location, offlineReply, onAnswer, updateLast])
 
     return { messages, appendMessages, draft, setDraft, send, isStreaming }
 }

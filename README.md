@@ -10,8 +10,8 @@ ubicaciones. Expone dos pestañas. **Mapa** es el escenario principal: al hacer 
 abre un panel lateral superpuesto con lo que ese actor pide u ofrece, cómo contactarle y las
 publicaciones de donde salió cada necesidad. **Conexiones** muestra el mismo conjunto como grafo
 flotante, con un hilo por emparejamiento. Ambas pestañas llevan un chat en la parte inferior que
-habla con el agente de coordinación; además, en Mapa vuela la cámara al punto que coincide con la
-petición y en Conexiones hace zoom sobre el grafo.
+habla con el agente de coordinación; cuando este termina de contestar, Mapa vuela la cámara a los
+puntos de los que habló y Conexiones los encuadra en el grafo.
 
 ### Qué endpoints se consumen
 
@@ -64,10 +64,10 @@ src/
 │   ├── EvidenceCard.tsx       Una publicación como evidencia de una necesidad
 │   ├── LocationMenu.tsx       Desplegable de ubicaciones
 │   ├── SelectMenu.tsx         El desplegable en sí, compartido por los dos menús
-│   ├── MapAssistant.tsx       El chat de la pestaña Mapa (agente + vuelo al punto)
+│   ├── MapAssistant.tsx       El chat de la pestaña Mapa (agente + vuelo a lo que señaló)
 │   ├── MapFit.tsx             Encuadra todos los puntos la primera vez que llegan
 │   ├── MapFocus.tsx           Vuela la cámara a la ubicación enfocada
-│   ├── MapSpotlight.tsx       Vuela la cámara al punto que encontró el chat
+│   ├── MapSpotlight.tsx       Vuela a un punto, o encuadra varios, según lo que dijo el agente
 │   ├── MapStage.tsx           MapContainer + capa de teselas + marcadores
 │   ├── PlaceMarker.tsx        Un punto → un marcador de Leaflet
 │   ├── RequirementCard.tsx    Una necesidad u oferta abierta dentro del panel
@@ -126,10 +126,16 @@ es lo único que conoce a ambos, y también el único que carga datos.
   respuesta llega en streaming (SSE) y se va escribiendo token a token; mientras tanto se enseña qué
   herramienta está usando el agente. El `thread_id` que devuelve el servidor se reenvía en los turnos
   siguientes, y solo se permite un turno a la vez por conversación.
-- **Encuadre guiado:** el agente contesta en prosa y nunca devuelve el id de un punto, así que a
-  dónde volar lo decide `findPlaceForText` sobre el texto del usuario: primero por recurso, ubicación
-  o nombre del actor, y si nada encaja, por las palabras del reporte original. Ante un empate gana
-  quien necesita ayuda.
+- **Encuadre guiado:** la respuesta es prosa y no nombra ninguna fila, pero el flujo trae eventos
+  `focus` con los ids que devolvieron las herramientas del agente — los mismos que dibuja el grafo,
+  así que un id es un punto sin traducción. `findPlacesForAnswer` los resuelve y luego mira la prosa
+  para quedarse con los que nombra, primero por nombre propio y después por ciudad o recurso; si no
+  nombra a ninguno, valen todos los que miró. La cámara se mueve **al terminar el turno**, una sola
+  vez: los ids llegan a mitad de camino, pero el agente todavía puede llamar a otra herramienta y
+  cambiar de asunto. Un punto se mira de cerca y abre su panel; varios se encuadran juntos y se
+  resaltan, sin panel — elegir uno afirmaría algo que el agente no dijo. Sin ids resueltos queda
+  `findPlaceForText` sobre la respuesta y, en último término, sobre la pregunta; si tampoco hay
+  nada, la cámara no se mueve.
 - **Qué se pinta y qué no:** un actor no aparece si no trae coordenadas, si su ubicación es más
   gruesa que `admin_2` (un centroide de departamento como marcador afirma un sitio que nadie
   reportó) o si no tiene nada abierto (no hay color que asignarle sin decir algo que no dijo). Un

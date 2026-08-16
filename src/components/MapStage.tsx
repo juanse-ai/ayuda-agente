@@ -16,8 +16,8 @@ interface MapStageProps {
     eventId: number | null
     selectedId: string | null
     focusedCity: City | null
-    /** Punto encontrado por el chat del mapa; ver MapSpotlight sobre su identidad. */
-    spotlight?: { place: Place } | null
+    /** Puntos de los que habló el agente; ver MapSpotlight sobre su identidad. */
+    spotlight?: { places: Place[] } | null
     onSelectPlace: (placeId: string) => void
 }
 
@@ -33,6 +33,11 @@ export function MapStage({
     spotlight = null,
     onSelectPlace
 }: MapStageProps) {
+    // Con varios señalados, el encuadre solo dice "por aquí": el halo dice cuáles.
+    const focusedIds = new Set(
+        spotlight !== null && spotlight.places.length > 1 ? spotlight.places.map((place) => place.id) : []
+    )
+
     return (
         <MapContainer
             center={MAP_CENTER}
@@ -57,6 +62,7 @@ export function MapStage({
                     key={place.id}
                     place={place}
                     isSelected={place.id === selectedId}
+                    isFocused={focusedIds.has(place.id)}
                     onSelect={onSelectPlace}
                 />
             ))}
