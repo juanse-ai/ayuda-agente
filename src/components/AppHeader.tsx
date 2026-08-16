@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 import type { EventBrief, EventSummary } from '@/types/graph'
 import type { City } from '@/types/place'
 
-/** Vistas de nivel superior de la app. Exactamente estas dos. */
+/** Vistas de nivel superior de la app. Exactamente estas doDDDs. */
 export type AppTab = 'mapa' | 'conexiones'
 
 const TABS: { id: AppTab; label: string }[] = [
