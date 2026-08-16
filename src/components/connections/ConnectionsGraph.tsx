@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { GRAPH_VIEWBOX } from '@/data/graphView'
 import { useGraphViewport } from '@/lib/useGraphViewport'
 import { cn } from '@/lib/utils'
-import type { KeyboardEvent as ReactKeyboardEvent } from 'react'
+import type { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent } from 'react'
 import type { ViewInsets } from '@/lib/useGraphViewport'
 import type { Connection, GraphPoint } from '@/types/connection'
 import type { Place } from '@/types/place'
@@ -21,20 +21,14 @@ interface ConnectionsGraphProps {
 const SETTLE_MS = 1400
 const SPOTLIGHT_SCALE = 1.8
 
-/**
- * A partir de aquí las etiquetas estorban más de lo que ayudan: los nombres
- * reales son largos y con muchos puntos se pisan unos a otros. El nombre sigue
- * a un clic de distancia, en el panel.
+/*
+ * Aquí no se pinta el nombre de los puntos. Los nombres reales son largos y los
+ * puntos de un mismo barrio caen a decenas de unidades unos de otros, así que
+ * las etiquetas se pisan; y acercarse no lo arregla, porque el zoom agranda por
+ * igual el texto y la distancia entre puntos. El nombre está donde se puede
+ * leer entero: en el panel, a un clic de distancia, y en el `aria-label` del
+ * punto para quien navega sin ver.
  */
-const MAX_LABELLED_DOTS = 25
-const MAX_LABEL_CHARS = 22
-
-/**
- * Aumento a partir del cual vuelven las etiquetas aunque haya muchos puntos: si
- * el usuario se acercó tanto es porque está mirando un cúmulo concreto, y ahí
- * caben pocos nombres en pantalla sin pisarse.
- */
-const LABEL_SCALE = 1.6
 
 /** Paso de los botones de zoom y de las teclas + y −. */
 const ZOOM_STEP = 1.4
@@ -66,11 +60,6 @@ const PANEL_BREAKPOINT = 640
 
 function easeOutCubic(t: number) {
     return 1 - Math.pow(1 - t, 3)
-}
-
-/** Nombre del actor recortado a lo que cabe bajo un punto. */
-function shortLabel(name: string): string {
-    return name.length > MAX_LABEL_CHARS ? `${name.slice(0, MAX_LABEL_CHARS - 1).trimEnd()}…` : name
 }
 
 /**
@@ -117,7 +106,6 @@ export function ConnectionsGraph({
 
     // La cámara: dónde está mirando el grafo y los gestos que la mueven.
     const {
-        view,
         viewStyle,
         isPanning,
         hasDragged,
@@ -230,6 +218,47 @@ export function ConnectionsGraph({
         })
     }, [spotlightId, layout, focusOn])
 
+    /**
+     * Qué punto se apretó, y abrirlo al soltar si el gesto no fue un arrastre.
+     *
+     * La selección no cuelga del `click` de cada punto porque el lienzo captura
+     * el puntero para poder arrastrar fuera de la ventana, y con la captura
+     * puesta el navegador reetiqueta `mouseup` —y con él el `click`— al SVG: el
+     * manejador del punto no llegaría a ejecutarse nunca. El par
+     * pointerdown/pointerup sí sabe siempre dónde empezó el gesto.
+     *
+     * Soltar sobre el fondo despeja la selección, que es lo que hacía antes el
+     * clic en el rectángulo de fondo.
+     */
+    const pressedPlaceId = useRef<string | null>(null)
+
+    const handlePointerDown = (event: ReactPointerEvent<SVGSVGElement>) => {
+        const dot = event.target instanceof Element ? event.target.closest('[data-place-id]') : null
+        pressedPlaceId.current = dot?.getAttribute('data-place-id') ?? null
+        gestureHandlers.onPointerDown(event)
+    }
+
+    const handlePointerUp = (event: ReactPointerEvent<SVGSVGElement>) => {
+        gestureHandlers.onPointerUp(event)
+        const placeId = pressedPlaceId.current
+        pressedPlaceId.current = null
+        // Recorrer el grafo no debe seleccionar ni despejar nada por el camino.
+        if (hasDragged()) {
+            return
+        }
+        if (placeId === null) {
+            onClearSelection()
+        } else {
+            onSelectDot(placeId)
+        }
+    }
+
+    const handlePointerCancel = (event: ReactPointerEvent<SVGSVGElement>) => {
+        // Un gesto cancelado (el sistema se queda el dedo) no es un clic.
+        pressedPlaceId.current = null
+        gestureHandlers.onPointerCancel(event)
+    }
+
     const handleKeyDown = (event: ReactKeyboardEvent<SVGSVGElement>) => {
         // Enter y espacio no llegan hasta aquí: los consume el punto enfocado.
         // El teclado mueve sin animación a propósito: con la tecla apretada, una
@@ -324,8 +353,6 @@ export function ConnectionsGraph({
         [connections, highlightedId, scatterById]
     )
 
-    const showLabels = places.length <= MAX_LABELLED_DOTS || view.scale >= LABEL_SCALE
-
     const dots = useMemo(
         () =>
             places.map((place) => {
@@ -344,14 +371,19 @@ export function ConnectionsGraph({
                             }
                         }}
                         transform={scatter !== undefined ? `translate(${scatter.x} ${scatter.y})` : undefined}
+                        // Es lo que lee `handlePointerDown` para saber qué punto
+                        // se apretó: el `click` de aquí no es de fiar mientras
+                        // el lienzo tiene capturado el puntero.
+                        data-place-id={place.id}
                         role="button"
                         tabIndex={0}
                         aria-label={`${place.name}, ${place.city} — ${
                             place.kind === 'needed' ? 'necesita ayuda' : 'ofrece ayuda'
                         }`}
-                        // Arrastrar el lienzo empieza casi siempre encima de
-                        // algo; sin esta guarda, mover la cámara abriría el
-                        // punto donde se apoyó la mano.
+                        // Un lector de pantalla activa el punto con un `click`
+                        // sintético, sin punteros de por medio: esta es su vía.
+                        // Con ratón o dedo manda el pointerup, y repetir la
+                        // misma selección no cambia nada.
                         onClick={() => {
                             if (!hasDragged()) {
                                 onSelectDot(place.id)
@@ -359,9 +391,12 @@ export function ConnectionsGraph({
                         }}
                         // Tabular hasta un punto que la cámara dejó fuera lo
                         // trae a la vista: si no, el foco se iría a la nada.
-                        onFocus={() => {
+                        // Solo con el teclado (`:focus-visible`): al hacer clic
+                        // el punto ya está donde el usuario apuntó, y mover la
+                        // cámara debajo de su mano sería un tirón sin motivo.
+                        onFocus={(event) => {
                             const point = layout[place.id]
-                            if (point !== undefined) {
+                            if (point !== undefined && event.currentTarget.matches(':focus-visible')) {
                                 ensureVisible(point, CHROME_INSETS)
                             }
                         }}
@@ -392,17 +427,6 @@ export function ConnectionsGraph({
                             stroke={isHighlighted ? color : 'none'}
                             strokeWidth={isHighlighted ? 3 : 0}
                         />
-                        {showLabels ? (
-                            <text
-                                y={30}
-                                textAnchor="middle"
-                                fill="var(--color-fg-subtle)"
-                                fontSize={11}
-                                className="pointer-events-none select-none"
-                            >
-                                {shortLabel(place.name)}
-                            </text>
-                        ) : null}
                     </g>
                 )
             }),
@@ -413,7 +437,6 @@ export function ConnectionsGraph({
             connectedIds,
             highlightedId,
             spotlightId,
-            showLabels,
             hasDragged,
             onSelectDot,
             ensureVisible
@@ -431,7 +454,10 @@ export function ConnectionsGraph({
                 tabIndex={0}
                 aria-label="Grafo de conexiones. Arrastra para recorrerlo y usa la rueda para acercarte; con el teclado, las flechas mueven, + y − acercan y 0 encuadra todos los puntos."
                 onKeyDown={handleKeyDown}
-                {...gestureHandlers}
+                onPointerDown={handlePointerDown}
+                onPointerMove={gestureHandlers.onPointerMove}
+                onPointerUp={handlePointerUp}
+                onPointerCancel={handlePointerCancel}
                 className={cn(
                     'conexiones-lienzo focus-visible:outline-brand h-full w-full touch-none outline-none focus-visible:outline-2 focus-visible:-outline-offset-2',
                     isPanning && 'conexiones-lienzo--agarrado'
@@ -453,20 +479,15 @@ export function ConnectionsGraph({
                     </pattern>
                 </defs>
 
-                {/* Superficie del gesto: recoge el arrastre empiece donde empiece
-                    y deshace la selección al soltarse sin haber movido nada. Va
-                    fuera del grupo con cámara, así que cubre la pantalla entera
-                    por muy lejos que se haya viajado. */}
+                {/* Superficie del gesto: hace que el arrastre y el toque en el
+                    vacío lleguen al SVG empiecen donde empiecen. Va fuera del
+                    grupo con cámara, así que cubre la pantalla entera por muy
+                    lejos que se haya viajado. */}
                 <rect
                     width={GRAPH_VIEWBOX.width}
                     height={GRAPH_VIEWBOX.height}
                     fill="none"
                     pointerEvents="all"
-                    onClick={() => {
-                        if (!hasDragged()) {
-                            onClearSelection()
-                        }
-                    }}
                 />
 
                 <g style={viewStyle}>

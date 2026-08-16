@@ -74,7 +74,7 @@ src/
 │   ├── SidePanel.tsx          Panel lateral superpuesto
 │   └── connections/
 │       ├── ConnectionsView.tsx   La vista Conexiones completa (su estado vive aquí)
-│       └── ConnectionsGraph.tsx  Grafo SVG: puntos a la deriva, hilos y spotlight
+│       └── ConnectionsGraph.tsx  Grafo SVG: puntos a la deriva, hilos, cámara y spotlight
 ├── data/
 │   ├── graphView.ts           Constantes de encuadre: centro, zooms y viewBox del grafo
 │   ├── labels.ts              Slug del backend → texto en español (amenazas, contactos, fechas)
@@ -85,6 +85,7 @@ src/
 │   ├── eventGraph.ts          Del payload del backend a puntos, conexiones, ciudades y posiciones
 │   ├── useEvents.ts           Las emergencias activas y cuál se está mirando
 │   ├── useEventGraph.ts       Carga el grafo de la emergencia seleccionada
+│   ├── useGraphViewport.ts    La cámara del grafo: arrastrar, acercar, encuadrar
 │   ├── useResource.ts         Un detalle que se pide al abrirlo (contactos, publicaciones)
 │   ├── useAgentChat.ts        La conversación: burbujas, borrador, hilo y turno en curso
 │   ├── useBackgroundMusic.ts  Hook de la música de fondo
@@ -136,7 +137,16 @@ es lo único que conoce a ambos, y también el único que carga datos.
   necesidad; el transportista que haría la entrega no se ve en el hilo.
 - **Grafo:** las posiciones de reposo son la geografía real proyectada sobre el viewBox, así que los
   cúmulos del grafo son los del mapa. Los actores de un mismo barrio caerían en el mismo píxel, por
-  lo que se reparten en corrillo alrededor de su posición; las etiquetas se recortan y desaparecen
-  por encima de 25 puntos, donde estorban más de lo que ayudan.
+  lo que se reparten en corrillo alrededor de su posición. Los puntos no llevan etiqueta: los
+  nombres reales son largos y se pisan entre sí, y acercarse no lo arregla porque el zoom agranda
+  por igual el texto y la distancia; el nombre está en el panel y en el `aria-label` del punto.
+- **Recorrer el grafo:** el viewBox es el encuadre de partida, no el borde del mundo. `useGraphViewport`
+  arrastra y acerca sin topes —ratón, dedo, pellizco, rueda, botones y teclado (flechas, `+`, `−`,
+  `0` para ver todo)— así que la red se explora entera. Un arrastre nunca selecciona ni despeja: la
+  selección la decide el par pointerdown/pointerup, y no el `click`, porque con el puntero capturado
+  el navegador reetiqueta el `click` al SVG y el manejador del punto no llegaría a ejecutarse. El
+  vuelo guiado del chat sigue existiendo, pero apagarlo ya no devuelve la cámara a su sitio: el
+  recorrido es del usuario. La malla de fondo viaja con el grafo — sin una referencia fija detrás,
+  arrastrar una zona vacía no se vería.
 - **Nada se envía:** la interfaz no publica ni contacta a nadie. Contactar pasa por el agente, que
   redacta un borrador con enlace para que una persona lo abra.

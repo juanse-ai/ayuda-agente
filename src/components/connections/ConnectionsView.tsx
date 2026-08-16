@@ -5,7 +5,7 @@ import { HelpLegend } from '@/components/HelpLegend'
 import { SidePanel } from '@/components/SidePanel'
 import { findPlaceForText } from '@/lib/eventGraph'
 import { useAgentChat } from '@/lib/useAgentChat'
-import type { ChatMessage, Connection, GraphPoint } from '@/types/connection'
+import type { Connection, GraphPoint } from '@/types/connection'
 import type { Place } from '@/types/place'
 
 /**
@@ -16,12 +16,6 @@ import type { Place } from '@/types/place'
  */
 type Selection =
     { status: 'idle' } | { status: 'highlighted'; placeId: string } | { status: 'panel'; placeId: string }
-
-const GREETING: ChatMessage = {
-    id: 'agente-saludo',
-    from: 'agent',
-    text: 'Hola, soy el agente de conexiones. Cuéntame cómo quieres ayudar (por ejemplo: "puedo llevar agua") y te muestro quién lo necesita.'
-}
 
 const OFFLINE_REPLY = 'Aun así te señalo en el grafo el punto que encaja con lo que escribiste.'
 
@@ -79,7 +73,6 @@ export function ConnectionsView({
 
     const { messages, draft, setDraft, send, isStreaming } = useAgentChat({
         eventId,
-        greeting: GREETING,
         onUserMessage: spotlightMatch,
         offlineReply: OFFLINE_REPLY
     })

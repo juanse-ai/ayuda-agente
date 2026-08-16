@@ -10,10 +10,10 @@
  * `preserveAspectRatio`: así el encuadre sale bien con la ventana ancha (donde
  * `slice` recorta arriba y abajo) y también estrecha.
  *
- * La vista es estado de React, no una ref con escrituras a mano: cambia como
+ * La vista es estado de React y no una ref con escrituras a mano: cambia como
  * mucho una vez por frame —los eventos de puntero no llegan más deprisa que el
- * repintado— y tenerla en estado es lo que permite que el resto del componente
- * reaccione al aumento (las etiquetas, por ejemplo).
+ * repintado— así que no hace falta salirse de React para que el arrastre vaya
+ * fino. Quien la consume solo pinta el `viewStyle` que sale de aquí.
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { CSSProperties, PointerEvent as ReactPointerEvent, RefObject } from 'react'
@@ -256,6 +256,15 @@ export function useGraphViewport(svgRef: RefObject<SVGSVGElement | null>) {
             if (svg === null) {
                 return
             }
+            // Un puntero primario es siempre el principio de un gesto: lo que
+            // quede vivo de uno anterior (un pointerup que nunca llegó porque
+            // el sistema se quedó el dedo, o un cambio de ventana a media
+            // pulsación) es basura. Sin esta limpieza el gesto siguiente se
+            // creería un pellizco y el lienzo dejaría de responder a los clics.
+            if (event.isPrimary) {
+                pointers.current.clear()
+                pinch.current = null
+            }
             event.currentTarget.setPointerCapture(event.pointerId)
             pointers.current.set(event.pointerId, toUserSpace(svg, event.clientX, event.clientY))
             if (pointers.current.size === 1) {
@@ -371,7 +380,6 @@ export function useGraphViewport(svgRef: RefObject<SVGSVGElement | null>) {
     }
 
     return {
-        view,
         viewStyle,
         /** True mientras hay un dedo o un botón apretado sobre el lienzo. */
         isPanning,
