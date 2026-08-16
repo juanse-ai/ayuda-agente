@@ -27,11 +27,11 @@ export function AppHeader({ cities, focusedId, activeTab, onFocusCity, onSelectT
             {/* width/height son el tamaño intrínseco real del archivo: reservan
                 el espacio correcto y evitan el salto de layout al cargar. */}
             <img
-                src="/logo.svg"
+                src="/logo.png"
                 alt="Ayuda Agente"
-                width={5792}
-                height={1256}
-                className="h-13 w-auto shrink-0"
+                width={939}
+                height={200}
+                className="h-8 w-auto shrink-0 sm:h-10"
             />
             <div
                 role="tablist"
