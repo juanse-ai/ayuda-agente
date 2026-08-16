@@ -2,6 +2,29 @@ import { Volume2, VolumeX } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 /**
+ * Un vídeo vertical para las pantallas verticales y el horizontal para el
+ * resto. La forma de la ventana es el criterio, y no si el aparato es un
+ * móvil: una ventana estrecha en el escritorio también quiere el vertical, y
+ * un móvil girado, el horizontal.
+ */
+const PORTRAIT_QUERY = '(max-aspect-ratio: 1/1)'
+
+/** Reacciona a girar el móvil o redimensionar la ventana, no sólo al montar. */
+function usePortraitViewport() {
+    const [portrait, setPortrait] = useState(() => window.matchMedia(PORTRAIT_QUERY).matches)
+
+    useEffect(() => {
+        const query = window.matchMedia(PORTRAIT_QUERY)
+        const update = () => setPortrait(query.matches)
+        query.addEventListener('change', update)
+        update()
+        return () => query.removeEventListener('change', update)
+    }, [])
+
+    return portrait
+}
+
+/**
  * Pantalla completa con el vídeo en bucle infinito y la canción sonando
  * encima, también en bucle. Cada uno con su propia duración: el vídeo dura
  * 6 s y la canción 12 s, así que se desfasan a propósito, sin sincronizar.
@@ -11,6 +34,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
  */
 export function VideoLoop() {
     const audioRef = useRef<HTMLAudioElement>(null)
+    const videoRef = useRef<HTMLVideoElement>(null)
+    const portrait = usePortraitViewport()
     const [playing, setPlaying] = useState(false)
     // Una pausa pedida por el usuario se respeta; las que impone el navegador no.
     const userPaused = useRef(false)
@@ -69,6 +94,52 @@ export function VideoLoop() {
         }
     }, [])
 
+    /**
+     * `loop` solo no basta en el móvil. Con `loop` puesto el navegador nunca
+     * dispara `ended` —reinicia por dentro—, así que cuando algo corta la
+     * reproducción el bucle se queda parado y no hay evento de final donde
+     * engancharse. Lo que sí llega siempre es `pause`, y en el móvil llega
+     * mucho: iOS pausa el vídeo al bloquear la pantalla, al cambiar de app, al
+     * entrar en modo de bajo consumo y cuando el decodificador se queda sin
+     * datos. Reanudar en `pause` es lo que hace el bucle infinito de verdad.
+     *
+     * El `ended` se conserva por si algún navegador ignora el `loop`.
+     */
+    useEffect(() => {
+        const video = videoRef.current
+        if (!video) return
+
+        // Como propiedad y no sólo como atributo: es lo que mira iOS para
+        // decidir si permite el autoarranque, y React no siempre lo refleja.
+        video.muted = true
+
+        const play = () => {
+            void video.play().catch(() => {})
+        }
+
+        // Con la pestaña oculta el navegador vuelve a pausar en cuanto
+        // arranque: insistir ahí sería pelearse con él y gastar batería.
+        const resume = () => {
+            if (!document.hidden) play()
+        }
+
+        const restart = () => {
+            video.currentTime = 0
+            play()
+        }
+
+        video.addEventListener('pause', resume)
+        video.addEventListener('ended', restart)
+        document.addEventListener('visibilitychange', resume)
+        play()
+
+        return () => {
+            video.removeEventListener('pause', resume)
+            video.removeEventListener('ended', restart)
+            document.removeEventListener('visibilitychange', resume)
+        }
+    }, [portrait])
+
     const toggleSound = useCallback(() => {
         const audio = audioRef.current
         if (!audio) return
@@ -85,27 +156,38 @@ export function VideoLoop() {
 
     return (
         <div className="relative h-dvh w-full overflow-hidden bg-black">
+            {/* Cambiar los `<source>` de sitio no recarga el vídeo —haría falta
+                un `load()` a mano—, así que la `key` fuerza un elemento nuevo al
+                girar el móvil y el navegador vuelve a elegir fuente. */}
             <video
+                key={portrait ? 'portrait' : 'landscape'}
+                ref={videoRef}
                 autoPlay
                 loop
                 muted
                 playsInline
-                // `loop` ya reinicia el vídeo, pero si el navegador corta el
-                // bucle (pestaña en segundo plano, decodificador que falla)
-                // este `onEnded` lo vuelve a poner en marcha desde cero.
-                onEnded={(event) => {
-                    const video = event.currentTarget
-                    video.currentTime = 0
-                    void video.play().catch(() => {})
-                }}
+                preload="auto"
                 className="h-full w-full object-contain"
             >
-                {/* El original es HEVC 4K y sólo Safari lo decodifica: en Chrome
-                    y Firefox la página quedaba en negro. El navegador se queda
-                    con la primera fuente que dice poder reproducir, así que
-                    Safari se lleva el 4K y el resto el H.264 de 1080p. */}
-                <source src="/video.mp4" type='video/mp4; codecs="hvc1"' />
-                <source src="/video-h264.mp4" type='video/mp4; codecs="avc1.640028"' />
+                {portrait ? (
+                    /* Una sola fuente para el móvil, y en H.264: el vertical
+                       original es HEVC, que Chrome de Android no decodifica, y
+                       pesa 21 MB con la tabla de índices al final del fichero,
+                       así que el navegador tenía que descargarlo entero antes
+                       de empezar. Por datos móviles eso es lo que rompía el
+                       bucle: sonaba una vez a duras penas y ya no volvía. */
+                    <source src="/video-mobile-h264.mp4" type='video/mp4; codecs="avc1.640028"' />
+                ) : (
+                    <>
+                        {/* El original es HEVC 4K y sólo Safari lo decodifica:
+                            en Chrome y Firefox la página quedaba en negro. El
+                            navegador se queda con la primera fuente que dice
+                            poder reproducir, así que Safari se lleva el 4K y el
+                            resto el H.264 de 1080p. */}
+                        <source src="/video.mp4" type='video/mp4; codecs="hvc1"' />
+                        <source src="/video-h264.mp4" type='video/mp4; codecs="avc1.640028"' />
+                    </>
+                )}
             </video>
             {/* El estado del botón sigue a la pista, no al revés: así también
                 refleja las pausas que no vienen de un click (autoarranque
