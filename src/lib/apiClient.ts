@@ -8,8 +8,8 @@
 import axios from 'axios'
 import type { ActorDetail, EventBrief, EventDetail, EventGraph, RequirementDetail } from '@/types/graph'
 
-// Túnel provisional del backend; se sustituye con VITE_API_BASE_URL sin tocar código.
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'https://mbg2wb4h-8000.use2.devtunnels.ms'
+// Origen del backend desplegado; se sustituye con VITE_API_BASE_URL sin tocar código.
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'https://api.ayudagente.help'
 
 /**
  * Todo `/api/` exige clave. Va en `VITE_API_KEY` porque no hay servidor propio

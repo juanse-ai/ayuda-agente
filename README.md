@@ -41,7 +41,7 @@ Dos variables, en `.env` (ignorado por git) o `.env.local`. **Solo se exponen al
 empiezan por `VITE_`**: una llamada `X-API-Key` no llega al código y el backend responde 401.
 
 ```bash
-VITE_API_BASE_URL=https://…      # origen del backend; sin ella, el túnel de src/lib/apiClient.ts
+VITE_API_BASE_URL=https://…      # origen del backend; sin ella, el de src/lib/apiClient.ts
 VITE_API_KEY=…                   # obligatoria: todo /api/ responde 401 sin clave
 ```
 
