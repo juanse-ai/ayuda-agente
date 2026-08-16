@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react'
 import { AppHeader, type AppTab } from '@/components/AppHeader'
 import { ConnectionsView } from '@/components/connections/ConnectionsView'
+import { FeedbackButton } from '@/components/FeedbackButton'
 import { HelpLegend } from '@/components/HelpLegend'
 import { MapAssistant } from '@/components/MapAssistant'
 import { MapStage } from '@/components/MapStage'
@@ -139,6 +140,9 @@ export default function App() {
                         layout={layout}
                     />
                 ) : null}
+                {/* Fuera del contenedor del mapa: la llamada al feedback vale
+                    para las dos pestañas y no debe quedarse `inert` con él. */}
+                <FeedbackButton />
                 {/* Aviso de carga o de fallo, por encima de las dos pestañas: sin
                     datos ambas están vacías y el silencio se lee como una app rota.
                     Si falló, el propio aviso es el botón de reintentar. */}

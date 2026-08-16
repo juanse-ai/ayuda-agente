@@ -507,8 +507,9 @@ export function ConnectionsGraph({
             </svg>
 
             {/* Mismo sitio y mismo lenguaje que el control de zoom del mapa
-                (abajo a la izquierda): las dos pestañas se manejan igual. */}
-            <div className="border-line bg-surface/85 absolute bottom-4 left-4 z-[1150] flex flex-col overflow-hidden rounded-md border backdrop-blur">
+                (abajo a la derecha): las dos pestañas se manejan igual, y la
+                esquina izquierda queda libre para el botón de feedback. */}
+            <div className="border-line bg-surface/85 absolute right-4 bottom-4 z-[1150] flex flex-col overflow-hidden rounded-md border backdrop-blur">
                 <button
                     type="button"
                     onClick={() => zoomBy(ZOOM_STEP)}

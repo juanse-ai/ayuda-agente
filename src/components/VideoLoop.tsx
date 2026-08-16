@@ -12,6 +12,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 export function VideoLoop() {
     const audioRef = useRef<HTMLAudioElement>(null)
     const [playing, setPlaying] = useState(false)
+    // Una pausa pedida por el usuario se respeta; las que impone el navegador no.
+    const userPaused = useRef(false)
 
     /**
      * Los navegadores bloquean el audio con sonido hasta la primera
@@ -23,13 +25,25 @@ export function VideoLoop() {
         const audio = audioRef.current
         if (!audio) return
 
+        const start = () => {
+            void audio.play().catch(() => {})
+        }
+
         const startOnInteraction = (event: Event) => {
             // Sobre el botón de sonido manda el botón: si arrancáramos aquí, el
             // click que llega justo después pausaría la canción recién iniciada.
             if (event.target instanceof Element && event.target.closest('[data-sound-toggle]')) {
                 return
             }
-            void audio.play().catch(() => {})
+            start()
+        }
+
+        // Chrome suspende el audio de las pestañas que están en segundo plano,
+        // así que abrir el enlace en una pestaña sin mirar deja la canción
+        // parada. Al volver a mirarla se reanuda, salvo que la pausa la haya
+        // pedido el usuario: sólo así el bucle es de verdad infinito.
+        const resumeWhenVisible = () => {
+            if (!document.hidden && !userPaused.current) start()
         }
 
         const cancelAutoStart = () => {
@@ -44,11 +58,13 @@ export function VideoLoop() {
         // clic del usuario no haría nada.
         window.addEventListener('pointerdown', startOnInteraction)
         window.addEventListener('keydown', startOnInteraction)
+        document.addEventListener('visibilitychange', resumeWhenVisible)
         audio.addEventListener('play', cancelAutoStart)
-        void audio.play().catch(() => {})
+        start()
 
         return () => {
             cancelAutoStart()
+            document.removeEventListener('visibilitychange', resumeWhenVisible)
             audio.removeEventListener('play', cancelAutoStart)
         }
     }, [])
@@ -57,8 +73,10 @@ export function VideoLoop() {
         const audio = audioRef.current
         if (!audio) return
         if (audio.paused) {
+            userPaused.current = false
             void audio.play().catch(() => {})
         } else {
+            userPaused.current = true
             audio.pause()
         }
     }, [])
@@ -95,6 +113,7 @@ export function VideoLoop() {
             <audio
                 ref={audioRef}
                 src="/cami.WAV"
+                autoPlay
                 loop
                 preload="auto"
                 onPlay={() => setPlaying(true)}

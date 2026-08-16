@@ -43,9 +43,11 @@ export function MapStage({
             className="h-full w-full"
         >
             <TileLayer url={TILE_URL} attribution={TILE_ATTRIBUTION} subdomains="abcd" maxZoom={20} />
-            {/* Both controls live bottom-left so the panel never covers the
-                required OpenStreetMap/CARTO attribution. */}
-            <ZoomControl position="bottomleft" />
+            {/* El zoom va abajo a la derecha; la esquina izquierda es del botón
+                de feedback. La atribución se queda a la izquierda: es
+                obligatoria y el panel de detalle, que entra por la derecha, no
+                puede taparla. */}
+            <ZoomControl position="bottomright" />
             <AttributionControl position="bottomleft" prefix={false} />
             <MapFit places={places} fitKey={eventId} />
             <MapFocus city={focusedCity} />
