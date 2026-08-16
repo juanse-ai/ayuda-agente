@@ -193,10 +193,47 @@ body {
 
 /* ==========================================================================
    Grafo de conexiones
-   Anillo pulsante del "spotlight" que el chat activa sobre un punto. Vive en
-   CSS plano porque anima la propiedad de geometría `r` de un <circle> SVG,
-   que Tailwind no cubre con utilidades.
+
+   Cursor propio del lienzo: una red de nodos en lugar de la flecha del sistema.
+   Dice lo que se puede hacer ahí —recorrer una red que no se acaba en el borde
+   de la pantalla— antes de que nadie arrastre nada.
+
+   Los colores van escritos en crudo y no como `var(--color-*)`: dentro de un
+   `data:` URI el SVG es un documento aparte y no ve los tokens del tema. Son
+   `--color-fg-muted` y `--color-brand`; si cambian ahí, cambian aquí.
+
+   El punto caliente (14 14) es el nodo central del dibujo, no una esquina: el
+   cursor rodea el sitio al que apunta. Safari no pinta cursores SVG, así que
+   cada regla lleva detrás el cursor equivalente del sistema.
    ========================================================================== */
+
+.conexiones-lienzo {
+    --cursor-grafo: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 28 28'%3E%3Cg stroke='%23d4d4d4' stroke-width='1.6' stroke-linecap='round' opacity='.65'%3E%3Cpath d='M14 14 6 6M14 14 23 10M14 14 11 23'/%3E%3C/g%3E%3Cg fill='%23d4d4d4'%3E%3Ccircle cx='14' cy='14' r='3.2'/%3E%3Ccircle cx='6' cy='6' r='2.2'/%3E%3Ccircle cx='23' cy='10' r='2.2'/%3E%3Ccircle cx='11' cy='23' r='2.2'/%3E%3C/g%3E%3C/svg%3E")
+        14 14;
+    --cursor-grafo-activo: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 28 28'%3E%3Cg stroke='%237b9cff' stroke-width='1.8' stroke-linecap='round' opacity='.9'%3E%3Cpath d='M14 14 6 6M14 14 23 10M14 14 11 23'/%3E%3C/g%3E%3Cg fill='%237b9cff'%3E%3Ccircle cx='14' cy='14' r='3.6'/%3E%3Ccircle cx='6' cy='6' r='2.4'/%3E%3Ccircle cx='23' cy='10' r='2.4'/%3E%3Ccircle cx='11' cy='23' r='2.4'/%3E%3C/g%3E%3C/svg%3E")
+        14 14;
+    cursor: var(--cursor-grafo), grab;
+}
+
+/* Arrastrando y sobre un punto se enciende el mismo dibujo en color de marca:
+   una sola familia de cursores para las dos cosas que se pueden hacer aquí. */
+.conexiones-lienzo--agarrado {
+    cursor: var(--cursor-grafo-activo), grabbing;
+}
+
+.conexiones-nodo {
+    cursor: var(--cursor-grafo-activo), pointer;
+}
+
+/* Un punto declara su propio cursor, así que no hereda el del lienzo: empezar
+   a arrastrar encima de uno se quedaría con la mano abierta del sistema. */
+.conexiones-lienzo--agarrado .conexiones-nodo {
+    cursor: var(--cursor-grafo-activo), grabbing;
+}
+
+/* Anillo pulsante del "spotlight" que el chat activa sobre un punto. Vive en
+   CSS plano porque anima la propiedad de geometría `r` de un <circle> SVG,
+   que Tailwind no cubre con utilidades. */
 
 @keyframes conexiones-pulse {
     from {

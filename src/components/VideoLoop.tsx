@@ -1,34 +1,73 @@
 import { Volume2, VolumeX } from 'lucide-react'
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 /**
- * Pantalla completa con el vídeo en bucle infinito.
+ * Pantalla completa con el vídeo en bucle infinito y la canción sonando
+ * encima, también en bucle. Cada uno con su propia duración: el vídeo dura
+ * 6 s y la canción 12 s, así que se desfasan a propósito, sin sincronizar.
  *
- * Arranca en silencio a propósito: los navegadores sólo dejan autoreproducir
- * un vídeo mudo, así que empezar con sonido significaría no empezar. El botón
- * de audio lo enciende con el gesto del usuario, que es lo único que la
- * política de autoplay acepta.
+ * El vídeo va mudo siempre y el sonido de la página es la canción: dejar las
+ * dos pistas sonando a la vez sería ruido, no música.
  */
 export function VideoLoop() {
-    const videoRef = useRef<HTMLVideoElement>(null)
-    const [muted, setMuted] = useState(true)
+    const audioRef = useRef<HTMLAudioElement>(null)
+    const [playing, setPlaying] = useState(false)
 
-    const toggleSound = useCallback(() => {
-        const video = videoRef.current
-        if (!video) return
-        video.muted = !video.muted
-        setMuted(video.muted)
-        // Encender el sonido es también el gesto que desbloquea la
-        // reproducción si el navegador la había frenado.
-        if (!video.muted) void video.play().catch(() => {})
+    /**
+     * Los navegadores bloquean el audio con sonido hasta la primera
+     * interacción del usuario (política de autoplay). Intentamos arrancar de
+     * inmediato; si el navegador lo rechaza, la canción entra en el primer
+     * clic o tecla que ocurra en la página.
+     */
+    useEffect(() => {
+        const audio = audioRef.current
+        if (!audio) return
+
+        const startOnInteraction = (event: Event) => {
+            // Sobre el botón de sonido manda el botón: si arrancáramos aquí, el
+            // click que llega justo después pausaría la canción recién iniciada.
+            if (event.target instanceof Element && event.target.closest('[data-sound-toggle]')) {
+                return
+            }
+            void audio.play().catch(() => {})
+        }
+
+        const cancelAutoStart = () => {
+            window.removeEventListener('pointerdown', startOnInteraction)
+            window.removeEventListener('keydown', startOnInteraction)
+        }
+
+        // Los oyentes se arman antes de intentar reproducir, y es el propio
+        // evento `play` quien los retira: si el navegador deja la promesa de
+        // `play()` pendiente en lugar de rechazarla (pestaña en segundo plano),
+        // armarlos en el `catch` los dejaría sin armar para siempre y el primer
+        // clic del usuario no haría nada.
+        window.addEventListener('pointerdown', startOnInteraction)
+        window.addEventListener('keydown', startOnInteraction)
+        audio.addEventListener('play', cancelAutoStart)
+        void audio.play().catch(() => {})
+
+        return () => {
+            cancelAutoStart()
+            audio.removeEventListener('play', cancelAutoStart)
+        }
     }, [])
 
-    const label = muted ? 'Activar el sonido' : 'Silenciar el vídeo'
+    const toggleSound = useCallback(() => {
+        const audio = audioRef.current
+        if (!audio) return
+        if (audio.paused) {
+            void audio.play().catch(() => {})
+        } else {
+            audio.pause()
+        }
+    }, [])
+
+    const label = playing ? 'Silenciar la canción' : 'Activar la canción'
 
     return (
         <div className="relative h-dvh w-full overflow-hidden bg-black">
             <video
-                ref={videoRef}
                 autoPlay
                 loop
                 muted
@@ -50,18 +89,30 @@ export function VideoLoop() {
                 <source src="/video.mp4" type='video/mp4; codecs="hvc1"' />
                 <source src="/video-h264.mp4" type='video/mp4; codecs="avc1.640028"' />
             </video>
+            {/* El estado del botón sigue a la pista, no al revés: así también
+                refleja las pausas que no vienen de un click (autoarranque
+                aceptado, sistema que corta el audio). */}
+            <audio
+                ref={audioRef}
+                src="/cami.WAV"
+                loop
+                preload="auto"
+                onPlay={() => setPlaying(true)}
+                onPause={() => setPlaying(false)}
+            />
             <button
                 type="button"
+                data-sound-toggle
                 onClick={toggleSound}
-                aria-pressed={!muted}
+                aria-pressed={playing}
                 aria-label={label}
                 title={label}
                 className="absolute right-4 bottom-4 flex size-10 items-center justify-center rounded-full border border-white/20 bg-black/50 text-white/80 backdrop-blur transition-colors duration-200 hover:bg-black/70 hover:text-white"
             >
-                {muted ? (
-                    <VolumeX size={16} strokeWidth={2} aria-hidden />
-                ) : (
+                {playing ? (
                     <Volume2 size={16} strokeWidth={2} aria-hidden />
+                ) : (
+                    <VolumeX size={16} strokeWidth={2} aria-hidden />
                 )}
             </button>
         </div>

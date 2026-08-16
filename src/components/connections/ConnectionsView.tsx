@@ -50,8 +50,10 @@ export function ConnectionsView({
     layout
 }: ConnectionsViewProps) {
     const [selection, setSelection] = useState<Selection>({ status: 'idle' })
-    // El spotlight (zoom del grafo) solo lo activa el chat; cualquier clic
-    // manual lo apaga: la manipulación directa manda sobre la guiada.
+    // El spotlight (el vuelo de cámara hacia un punto) solo lo activa el chat;
+    // cualquier clic manual lo apaga: la manipulación directa manda sobre la
+    // guiada. Apagarlo no devuelve la cámara a donde estaba — el grafo se
+    // recorre a mano, y deshacer ese recorrido sería quitárselo de debajo.
     const [spotlightId, setSpotlightId] = useState<string | null>(null)
 
     // Derivados en render, como en App. OJO: siempre el objeto de `places`, nunca
