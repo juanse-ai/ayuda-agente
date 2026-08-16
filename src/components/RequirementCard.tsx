@@ -7,20 +7,41 @@ import { cn } from '@/lib/utils'
 import type { Urgency } from '@/types/graph'
 import type { PlaceRequirement } from '@/types/place'
 
-/** Etiqueta y color de cada urgencia. Solo `critical` y `high` gritan. */
-const URGENCY: Record<Urgency, { label: string; className: string }> = {
-    critical: { label: 'Crítica', className: 'border-need/50 text-need' },
-    high: { label: 'Alta', className: 'border-need/30 text-need' },
-    medium: { label: 'Media', className: 'border-line text-fg-subtle' },
-    low: { label: 'Baja', className: 'border-line text-fg-faint' }
+/**
+ * Cada urgencia en el vocabulario del resto de la interfaz: un punto de color y
+ * una palabra, exactamente como la leyenda del mapa, sobre la misma tarjeta
+ * plana de línea fina que usan los contactos y las publicaciones.
+ *
+ * La escala es la del rojo que ya significa algo aquí —el del punto que pide
+ * ayuda—, apagándose hasta el gris. Nada de tonos nuevos: en esta paleta el
+ * color es la excepción, y una necesidad crítica solo destaca si las demás no
+ * compiten. Solo esas dos tiñen además la línea de la tarjeta.
+ */
+const URGENCY: Record<Urgency, { label: string; card: string; dot: string; text: string }> = {
+    critical: { label: 'Crítica', card: 'border-need/40', dot: 'bg-need', text: 'text-need' },
+    high: { label: 'Alta', card: 'border-need/20', dot: 'bg-need/70', text: 'text-need/85' },
+    medium: { label: 'Media', card: 'border-line', dot: 'bg-fg-faint', text: 'text-fg-subtle' },
+    low: { label: 'Baja', card: 'border-line', dot: 'bg-fg-faint/45', text: 'text-fg-faint' }
 }
 
 interface RequirementCardProps {
     requirement: PlaceRequirement
+    /**
+     * Si las publicaciones se ven desde el principio. El panel lo enciende solo
+     * en la primera tarjeta —la misma que resume su cabecera—: las
+     * publicaciones son la respuesta a "¿y tú cómo sabes eso?", y todas detrás
+     * de un clic no las abre nadie.
+     *
+     * Una por punto y no todas a propósito: seis necesidades abiertas serían
+     * seis peticiones al abrir el panel, que es justo lo que evita pedir la
+     * evidencia al desplegar.
+     */
+    defaultOpen?: boolean
 }
 
 /**
- * Una necesidad u oferta abierta del punto, con sus publicaciones a un clic.
+ * Una necesidad u oferta abierta del punto, con las publicaciones de las que
+ * salió.
  *
  * La evidencia se pide al desplegar, no al abrir el panel: un punto con seis
  * necesidades serían seis peticiones para algo que casi nunca se mira entero.
@@ -28,13 +49,15 @@ interface RequirementCardProps {
  * necesidades y una necesidad puede estar respaldada por varias publicaciones,
  * así que enseñar "la" publicación acierta tan a menudo como falla.
  */
-export function RequirementCard({ requirement }: RequirementCardProps) {
-    const [isOpen, setIsOpen] = useState(false)
+export function RequirementCard({ requirement, defaultOpen = false }: RequirementCardProps) {
+    const [isOpen, setIsOpen] = useState(defaultOpen)
     const urgency = URGENCY[requirement.urgency]
     const { data, status } = useResource(fetchRequirement, isOpen ? requirement.id : null)
 
     return (
-        <li className="border-line bg-page rounded-lg border">
+        // Misma tarjeta que en el resto del panel; lo único que cambia con la
+        // urgencia es el tono de la línea, y solo cuando hay prisa.
+        <li className={cn('bg-page rounded-lg border', urgency.card)}>
             <button
                 type="button"
                 onClick={() => setIsOpen((open) => !open)}
@@ -43,12 +66,15 @@ export function RequirementCard({ requirement }: RequirementCardProps) {
             >
                 <div className="flex items-start justify-between gap-3">
                     <p className="text-fg min-w-0 text-sm font-medium">{requirement.resource}</p>
+                    {/* Punto y palabra, como en `HelpLegend`: el color se lee de
+                        lejos y el texto lo dice para quien no lo distingue. */}
                     <span
                         className={cn(
-                            'shrink-0 rounded-full border px-2 py-0.5 text-[11px] font-medium',
-                            urgency.className
+                            'flex shrink-0 items-center gap-1.5 pt-0.5 text-[11px] font-medium',
+                            urgency.text
                         )}
                     >
+                        <span className={cn('size-1.5 shrink-0 rounded-full', urgency.dot)} aria-hidden />
                         {urgency.label}
                     </span>
                 </div>
@@ -72,8 +98,15 @@ export function RequirementCard({ requirement }: RequirementCardProps) {
                 </span>
             </button>
 
+            {/* Región propia, con su encabezado y separada de la tarjeta: las
+                publicaciones son la prueba de lo de arriba, no una nota al pie
+                suya. El encabezado repite la palabra del botón a propósito —el
+                botón es la acción, esto es la etiqueta de lo que quedó abierto. */}
             {isOpen ? (
-                <div className="border-line border-t px-3.5 py-3">
+                <div className="border-line border-t px-3.5 pt-3 pb-3.5">
+                    <h4 className="text-fg-subtle mb-2.5 text-[11px] font-semibold tracking-[0.09em] uppercase">
+                        Publicaciones
+                    </h4>
                     {status === 'loading' ? (
                         <p className="text-fg-subtle animate-pulse text-xs">Buscando publicaciones…</p>
                     ) : null}

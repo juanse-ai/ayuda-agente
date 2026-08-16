@@ -1,5 +1,6 @@
 import { ArrowUp } from 'lucide-react'
 import { useEffect, useRef } from 'react'
+import { Markdown } from '@/components/Markdown'
 import { cn } from '@/lib/utils'
 import type { Ref } from 'react'
 import type { ChatMessage } from '@/types/connection'
@@ -32,6 +33,9 @@ function pendingLabel(message: ChatMessage): string | null {
  * Barra de chat compartida por Mapa y Conexiones. Presentational: pinta
  * burbujas y reporta el borrador y el envío; la conversación con el agente vive
  * en `useAgentChat`. Nunca llama a ninguna red ni API.
+ *
+ * Lo que escribe el agente viene en Markdown y se pinta como Markdown (ver
+ * `Markdown`); lo que escribe el usuario es texto tal cual.
  *
  * `z-[1100]` porque sobre el mapa debe pintarse encima de los controles de
  * Leaflet (z 1000) y debajo del panel lateral (z 1200); en Conexiones cualquier
@@ -89,7 +93,10 @@ export function ChatBar({
                     // `mb-12` reserva la banda a la que sube el botón de feedback
                     // cuando esta columna llega a las esquinas (ver FeedbackButton):
                     // sin ella las burbujas quedarían debajo del botón.
-                    className="mb-12 flex max-h-[40dvh] flex-col gap-2 overflow-y-auto overscroll-contain pr-1 xl:mb-0"
+                    // `chat-scroll` da la barra de scroll fina del compositor
+                    // (ver index.css); va aquí y no global para no tocar la de
+                    // Leaflet ni la del panel lateral.
+                    className="chat-scroll mb-12 flex max-h-[40dvh] flex-col gap-2 overflow-y-auto overscroll-contain pr-1 xl:mb-0"
                 >
                     {messages.map((message) => {
                         const label = pendingLabel(message)
@@ -103,18 +110,28 @@ export function ChatBar({
                             >
                                 <div
                                     className={cn(
-                                        'max-w-[85%] rounded-2xl border px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap',
+                                        // `break-words` para que un enlace largo
+                                        // sin espacios no estire la burbuja fuera
+                                        // de la columna.
+                                        'max-w-[85%] rounded-2xl border px-3.5 py-2.5 text-sm leading-relaxed break-words',
                                         message.from === 'user'
-                                            ? 'border-brand-strong/40 bg-brand-strong/20 text-fg'
-                                            : 'border-line bg-surface text-fg-muted'
+                                            ? // Lo que escribe el usuario es texto tal cual: sus
+                                              // saltos de línea se respetan y sus asteriscos no
+                                              // son formato.
+                                              'border-[#7b9cff]/40 bg-[#7b9cff]/20 whitespace-pre-wrap text-gray-100'
+                                            : 'border-[#444444] bg-[#1F2023] text-gray-100'
                                     )}
                                 >
                                     {label !== null ? (
-                                        <span className="text-fg-subtle mb-1 block animate-pulse text-xs">
+                                        <span className="mb-1 block animate-pulse text-xs text-gray-400">
                                             {label}
                                         </span>
                                     ) : null}
-                                    {message.text}
+                                    {message.from === 'user' ? (
+                                        message.text
+                                    ) : (
+                                        <Markdown text={message.text} />
+                                    )}
                                 </div>
                             </div>
                         )
@@ -127,7 +144,23 @@ export function ChatBar({
                         event.preventDefault()
                         onSend()
                     }}
-                    className="border-line bg-surface flex items-center gap-2 rounded-full border p-1.5 shadow-2xl shadow-black/50"
+                    // El anillo va en `focus-within` y no en `focus`: el cursor
+                    // cae en el campo de dentro, pero lo que el usuario ve
+                    // enfocado es la tarjeta entera.
+                    //
+                    // El anillo del turno en curso existe porque enviar
+                    // deshabilita el campo, y eso saca a la tarjeta de
+                    // `:focus-within`: sin él el borde volvería al gris plano en
+                    // el mismo instante del envío. El anillo escribe
+                    // `--tw-ring-shadow` y la sombra `--tw-shadow`, así que
+                    // Tailwind compone las dos. Se ata a `isStreaming` y no a
+                    // `blockedBy`: el acento dice "hay un turno corriendo", no
+                    // "la barra está cerrada por otro motivo".
+                    className={cn(
+                        'rounded-3xl border border-[#444444] bg-[#1F2023] p-2 shadow-[0_8px_30px_rgba(0,0,0,0.24)] transition-all duration-300 ease-in-out',
+                        'focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-400/20',
+                        isStreaming === true && 'border-[#7b9cff] ring-2 ring-[#7b9cff]/20'
+                    )}
                 >
                     <input
                         ref={attachInput}
@@ -139,18 +172,34 @@ export function ChatBar({
                         disabled={blockedBy !== null}
                         placeholder={blockedBy ?? 'Escribe cómo quieres ayudar…'}
                         aria-label="Mensaje"
-                        // 16 px con el dedo: por debajo de eso Safari en iOS hace
-                        // zoom al enfocar el campo y descuadra la pantalla entera.
-                        className="text-fg placeholder:text-fg-faint coarse:text-base min-w-0 flex-1 bg-transparent px-3 text-sm outline-none"
+                        // `text-base` son los 16 px que Safari en iOS necesita
+                        // para no hacer zoom al enfocar el campo y descuadrar la
+                        // pantalla entera: no bajarlo a `text-sm`.
+                        className="min-h-[44px] w-full bg-transparent px-3 py-2.5 text-base text-gray-100 outline-none placeholder:text-gray-400 focus-visible:ring-0 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                     />
-                    <button
-                        type="submit"
-                        disabled={draft.trim() === '' || blockedBy !== null}
-                        aria-label="Enviar"
-                        className="bg-brand-strong text-fg coarse:size-11 grid size-9 shrink-0 place-items-center rounded-full transition-opacity duration-200 disabled:opacity-40"
-                    >
-                        <ArrowUp size={16} strokeWidth={2} aria-hidden />
-                    </button>
+                    <div className="flex items-center justify-end gap-2 p-0 pt-2">
+                        <button
+                            type="submit"
+                            disabled={draft.trim() === '' || blockedBy !== null}
+                            aria-label="Enviar"
+                            className={cn(
+                                'inline-flex size-8 shrink-0 items-center justify-center rounded-full font-medium transition-all duration-200 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50',
+                                // 44 px de objetivo táctil con el dedo; el diseño de escritorio son 32.
+                                'coarse:size-11',
+                                draft.trim() !== ''
+                                    ? 'bg-white text-[#1F2023] hover:bg-white/80'
+                                    : 'bg-transparent text-[#9CA3AF] hover:bg-gray-600/30 hover:text-[#D1D5DB]'
+                            )}
+                        >
+                            <ArrowUp
+                                className={cn(
+                                    'h-4 w-4',
+                                    draft.trim() !== '' ? 'text-[#1F2023]' : 'text-inherit'
+                                )}
+                                aria-hidden
+                            />
+                        </button>
+                    </div>
                 </form>
             </div>
         </div>
