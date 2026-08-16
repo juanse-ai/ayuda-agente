@@ -41,6 +41,12 @@
     --radius-2xl: 24px;
 }
 
+/* Variante para pantallas que se tocan con el dedo. Va por tipo de puntero y no
+   por ancho a propósito: un iPhone en horizontal mide 852 px, así que atarla a
+   un breakpoint dejaría los objetivos táctiles pequeños justo donde más falta
+   hacen. Un escritorio con ratón no la cruza a ningún ancho. */
+@custom-variant coarse (@media (pointer: coarse));
+
 :root {
     color-scheme: dark;
 }
@@ -50,6 +56,9 @@ body {
     color: var(--color-fg);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    /* Nada de esta app hace scroll; sin esto iOS rebota la página entera al
+       arrastrar sobre el mapa o el grafo y el gesto se lee como un fallo. */
+    overscroll-behavior: none;
 }
 
 /* ==========================================================================
@@ -111,11 +120,65 @@ body {
     color: var(--color-fg-faint);
 }
 
+/* Con el dedo, los 30 px que Leaflet da a sus botones táctiles se quedan cortos.
+   `line-height` acompaña al alto porque los signos + y − se centran con ella. */
+@media (pointer: coarse) {
+    .leaflet-container .leaflet-bar a {
+        width: 44px;
+        height: 44px;
+        line-height: 44px;
+    }
+}
+
 /* Los controles inferiores deben pintarse por encima del degradado del chat
    del mapa (z 1100) para que la atribución —obligatoria— siga legible y el
    zoom siga clicable. Leaflet los trae a z-index 1000. */
 .leaflet-container .leaflet-bottom {
     z-index: 1150;
+}
+
+/* Por debajo de 1280 px la columna del chat (max-w-3xl centrada, con px-4) llega
+   a las dos esquinas inferiores, así que ahí no cabe ya ningún control: el zoom
+   sube a la derecha —la leyenda ocupa la izquierda— y la atribución se coloca
+   justo debajo de ella, que es donde sigue siempre visible y clicable.
+
+   Los márgenes hay que reponerlos a mano: el contenedor conserva la clase
+   `.leaflet-bottom`, cuya regla da `margin-bottom` y ningún `margin-top`. Los
+   16 px igualan el `top-4`/`right-4` de la leyenda y del zoom del grafo; los
+   88 px de la izquierda son el alto de la leyenda del mapa (top-4 + dos filas),
+   que no crece: la fila de "Conexión" solo existe en el grafo, donde no hay
+   atribución que colocar. */
+@media (max-width: 1279px) {
+    .leaflet-container .leaflet-bottom {
+        top: 0;
+        bottom: auto;
+    }
+
+    .leaflet-container .leaflet-bottom .leaflet-control {
+        margin-top: 16px;
+        margin-bottom: 0;
+    }
+
+    /* La atribución se pega al borde izquierdo cuando vive en la esquina (lo
+       hace la propia leaflet.css); ya recolocada, se alinea con la leyenda. */
+    .leaflet-container .leaflet-bottom.leaflet-left .leaflet-control {
+        margin-top: 88px;
+        margin-left: 16px;
+    }
+}
+
+/* En un teléfono, además, la fila de mandos del evento flota sobre el mapa justo
+   debajo de la cabecera, así que zoom y atribución bajan un escalón más: el zoom
+   por debajo de esa fila y la atribución por debajo de la leyenda, que ahí
+   arranca en `top-16`. */
+@media (max-width: 639px) {
+    .leaflet-container .leaflet-bottom.leaflet-right .leaflet-control {
+        margin-top: 64px;
+    }
+
+    .leaflet-container .leaflet-bottom.leaflet-left .leaflet-control {
+        margin-top: 136px;
+    }
 }
 
 /* Attribution — sits bottom-left under the zoom control, so it reads as a pill */

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { askAgent, toolLabel } from '@/lib/agentApi'
+import { useUserLocation } from '@/lib/useUserLocation'
 import type { AgentName } from '@/lib/agentApi'
 import type { ChatMessage } from '@/types/connection'
 
@@ -33,6 +34,10 @@ function describeFailure(error: unknown): string {
  * que es lo que hace que "¿y quién puede surtirlo?" se entienda sin repetir qué
  * era "lo". Un solo turno a la vez por hilo: mandar otro mensaje mientras el
  * primero responde entrelazaría dos escrituras sobre la misma conversación.
+ *
+ * La ubicación se pide aquí y no en las vistas por lo mismo: es parte de la
+ * petición, y las dos pestañas la mandarían igual. Se adjunta la última conocida
+ * en cada turno, así que "cerca de mí" sigue al coordinador si se mueve.
  */
 export function useAgentChat({
     eventId,
@@ -44,6 +49,9 @@ export function useAgentChat({
     const [messages, setMessages] = useState<ChatMessage[]>(greeting === undefined ? [] : [greeting])
     const [draft, setDraft] = useState('')
     const [isStreaming, setIsStreaming] = useState(false)
+
+    // Null mientras el navegador no la haya dado; el turno se manda igual.
+    const location = useUserLocation()
 
     const threadIdRef = useRef<string | null>(null)
     const abortRef = useRef<AbortController | null>(null)
@@ -88,6 +96,7 @@ export function useAgentChat({
                 eventId,
                 message: text,
                 threadId: threadIdRef.current,
+                location,
                 signal: controller.signal,
                 onEvent: (event) => {
                     switch (event.type) {
@@ -137,7 +146,7 @@ export function useAgentChat({
                 setIsStreaming(false)
             }
         }
-    }, [agent, draft, eventId, isStreaming, offlineReply, onUserMessage, updateLast])
+    }, [agent, draft, eventId, isStreaming, location, offlineReply, onUserMessage, updateLast])
 
     return { messages, appendMessages, draft, setDraft, send, isStreaming }
 }

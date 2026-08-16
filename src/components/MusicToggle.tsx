@@ -15,7 +15,7 @@ export function MusicToggle() {
             aria-pressed={playing}
             aria-label={label}
             title={label}
-            className="border-line text-fg-muted hover:bg-surface hover:text-fg flex size-8 shrink-0 items-center justify-center rounded-full border transition-colors duration-200"
+            className="border-line text-fg-muted hover:bg-surface hover:text-fg coarse:size-10 flex size-8 shrink-0 items-center justify-center rounded-full border transition-colors duration-200"
         >
             {playing ? (
                 <Volume2 size={14} strokeWidth={2} aria-hidden />

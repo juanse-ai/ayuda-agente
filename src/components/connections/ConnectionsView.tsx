@@ -99,9 +99,13 @@ export function ConnectionsView({
     }
 
     return (
-        // `isolate` crea un stacking context propio: el z-[1200] del panel y
-        // los z bajos del grafo/chat no compiten con los del mapa ni el header.
-        <section aria-label="Conexiones" className="bg-page absolute inset-0 isolate overflow-hidden">
+        // Sin `isolate` a propósito: los mandos del evento viven en el header y
+        // en móvil flotan sobre esta vista, así que tienen que quedar por encima
+        // del grafo y por debajo del panel de detalle. Aislar esta sección los
+        // dejaría a todos de un mismo lado. Los z de dentro ya cuentan con eso:
+        // grafo y chat abajo (1100-1150), panel arriba (1200). Con el mapa no
+        // hay conflicto: mientras esta vista está montada, aquel es `invisible`.
+        <section aria-label="Conexiones" className="bg-page absolute inset-0 overflow-hidden">
             <ConnectionsGraph
                 places={places}
                 connections={connections}

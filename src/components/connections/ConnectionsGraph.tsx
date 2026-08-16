@@ -506,15 +506,18 @@ export function ConnectionsGraph({
                 </g>
             </svg>
 
-            {/* Mismo sitio y mismo lenguaje que el control de zoom del mapa
-                (abajo a la derecha): las dos pestañas se manejan igual, y la
-                esquina izquierda queda libre para el botón de feedback. */}
-            <div className="border-line bg-surface/85 absolute right-4 bottom-4 z-[1150] flex flex-col overflow-hidden rounded-md border backdrop-blur">
+            {/* Mismo sitio y mismo lenguaje que el control de zoom del mapa: las
+                dos pestañas se manejan igual. Por debajo de 1280 px las dos lo
+                suben a la esquina superior derecha, porque abajo la columna del
+                chat llega a los bordes y taparía el botón de enviar; arriba a la
+                izquierda está la leyenda, así que la derecha queda libre. En
+                móvil baja un escalón más: encima está la fila de mandos. */}
+            <div className="border-line bg-surface/85 absolute top-16 right-4 z-[1150] flex flex-col overflow-hidden rounded-md border backdrop-blur sm:top-4 xl:top-auto xl:bottom-4">
                 <button
                     type="button"
                     onClick={() => zoomBy(ZOOM_STEP)}
                     aria-label="Acercar"
-                    className="border-line text-fg-muted hover:bg-surface-muted hover:text-fg focus-visible:outline-brand grid size-9 place-items-center border-b transition-colors duration-200 focus-visible:outline-2 focus-visible:-outline-offset-2"
+                    className="border-line text-fg-muted hover:bg-surface-muted hover:text-fg focus-visible:outline-brand coarse:size-11 grid size-9 place-items-center border-b transition-colors duration-200 focus-visible:outline-2 focus-visible:-outline-offset-2"
                 >
                     <Plus size={16} strokeWidth={2} aria-hidden />
                 </button>
@@ -522,7 +525,7 @@ export function ConnectionsGraph({
                     type="button"
                     onClick={() => zoomBy(1 / ZOOM_STEP)}
                     aria-label="Alejar"
-                    className="border-line text-fg-muted hover:bg-surface-muted hover:text-fg focus-visible:outline-brand grid size-9 place-items-center border-b transition-colors duration-200 focus-visible:outline-2 focus-visible:-outline-offset-2"
+                    className="border-line text-fg-muted hover:bg-surface-muted hover:text-fg focus-visible:outline-brand coarse:size-11 grid size-9 place-items-center border-b transition-colors duration-200 focus-visible:outline-2 focus-visible:-outline-offset-2"
                 >
                     <Minus size={16} strokeWidth={2} aria-hidden />
                 </button>
@@ -530,7 +533,7 @@ export function ConnectionsGraph({
                     type="button"
                     onClick={fitAll}
                     aria-label="Ver todo el grafo"
-                    className="text-fg-muted hover:bg-surface-muted hover:text-fg focus-visible:outline-brand grid size-9 place-items-center transition-colors duration-200 focus-visible:outline-2 focus-visible:-outline-offset-2"
+                    className="text-fg-muted hover:bg-surface-muted hover:text-fg focus-visible:outline-brand coarse:size-11 grid size-9 place-items-center transition-colors duration-200 focus-visible:outline-2 focus-visible:-outline-offset-2"
                 >
                     <Maximize size={16} strokeWidth={2} aria-hidden />
                 </button>

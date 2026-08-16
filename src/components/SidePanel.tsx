@@ -79,7 +79,7 @@ export function SidePanel({ place, onClose }: SidePanelProps) {
                             type="button"
                             onClick={onClose}
                             aria-label="Cerrar panel"
-                            className="border-line text-fg-subtle hover:bg-surface-muted hover:text-fg grid size-8 shrink-0 place-items-center rounded-md border transition-colors duration-200"
+                            className="border-line text-fg-subtle hover:bg-surface-muted hover:text-fg coarse:size-10 grid size-8 shrink-0 place-items-center rounded-md border transition-colors duration-200"
                         >
                             <X size={15} strokeWidth={2} aria-hidden />
                         </button>
