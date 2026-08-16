@@ -146,8 +146,9 @@ export function ConnectionsView({
         selection.status === 'panel' ? (places.find((place) => place.id === selection.placeId) ?? null) : null
     const highlightedId = selection.status === 'idle' ? null : selection.placeId
 
-    // Igual que en el mapa: se mira a dónde apuntó la respuesta, no la pregunta, y el panel
-    // solo se abre cuando hay un único punto — con varios habría que elegir uno.
+    // Igual que en el mapa: se mira a dónde apuntó la respuesta, no la pregunta. Encuadre
+    // sobre todo lo señalado y panel del primero, que es el que la respuesta pone por
+    // delante; es un solo gesto guiado.
     const spotlightAnswer = useCallback(
         (answer: AgentAnswer) => {
             const matched = findPlacesForAnswer({ ...answer, places })
@@ -155,9 +156,7 @@ export function ConnectionsView({
                 return
             }
             setSpotlight({ ids: matched.map((place) => place.id) })
-            setSelection(
-                matched.length === 1 ? { status: 'panel', placeId: matched[0].id } : { status: 'idle' }
-            )
+            setSelection({ status: 'panel', placeId: matched[0].id })
         },
         [places]
     )

@@ -22,6 +22,14 @@ export const CITY_ZOOM = 12
 export const PLACE_ZOOM = 15
 
 /**
+ * El panel de detalle, que el chat abre a la vez que vuela: hay que encuadrar en lo que
+ * queda a su izquierda, no debajo de él. Por debajo de `sm` ocupa todo el ancho y entonces
+ * no hay hueco que respetar.
+ */
+export const PANEL_WIDTH = 380
+export const PANEL_BREAKPOINT = 640
+
+/**
  * Tamaño del viewBox del grafo de Conexiones. El SVG usa `preserveAspectRatio`
  * en modo `slice`, así que en pantallas muy anchas o muy altas se recortan los
  * bordes: por eso las posiciones se proyectan sobre una zona segura interior.

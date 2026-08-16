@@ -1,11 +1,14 @@
-import { latLngBounds } from 'leaflet'
+import { latLngBounds, point } from 'leaflet'
 import { useEffect } from 'react'
 import { useMap } from 'react-leaflet'
-import { PLACE_ZOOM } from '@/data/graphView'
+import { PANEL_BREAKPOINT, PANEL_WIDTH, PLACE_ZOOM } from '@/data/graphView'
 import type { Place } from '@/types/place'
 
 /** Duración del vuelo, la misma se acerque a un punto o encuadre varios. */
 const FLIGHT_SECONDS = 1.2
+
+/** Aire alrededor del encuadre, el mismo que usa MapFit al llegar los puntos. */
+const PADDING = 60
 
 interface MapSpotlightProps {
     /**
@@ -25,7 +28,8 @@ interface MapSpotlightProps {
  *
  * Un punto se mira de cerca; varios se encuadran juntos. Acercarse a uno de los cinco que
  * la respuesta menciona afirmaría que es *el* sitio, y el encuadre dice lo que de verdad
- * dijo el agente: están todos ahí.
+ * dijo el agente: están todos ahí. En los dos casos se abre el panel del primero, así que
+ * el encuadre esquiva el ancho que ocupa.
  */
 export function MapSpotlight({ target }: MapSpotlightProps) {
     const map = useMap()
@@ -39,8 +43,10 @@ export function MapSpotlight({ target }: MapSpotlightProps) {
             map.flyTo(places[0].position, PLACE_ZOOM, { duration: FLIGHT_SECONDS })
             return
         }
+        const panel = window.innerWidth >= PANEL_BREAKPOINT ? PANEL_WIDTH : 0
         map.flyToBounds(latLngBounds(places.map((place) => place.position)), {
-            padding: [60, 60],
+            paddingTopLeft: point(PADDING, PADDING),
+            paddingBottomRight: point(PADDING + panel, PADDING),
             duration: FLIGHT_SECONDS
         })
     }, [map, target])

@@ -53,15 +53,16 @@ export default function App() {
     const handleSelectPlace = useCallback((placeId: string) => setSelectedId(placeId), [])
     const handleClose = useCallback(() => setSelectedId(null), [])
 
-    // Lo que señaló la respuesta del agente: volar hacia ello y, solo si es un punto,
-    // abrir su detalle. Con varios el panel tendría que elegir uno, y elegirlo por su
-    // cuenta afirmaría algo que el agente no dijo.
+    // Lo que señaló la respuesta del agente: volar hacia ello y abrir el detalle del
+    // primero. Con varios, el encuadre enseña el conjunto y el panel el que la respuesta
+    // pone por delante — llegan ordenados por relevancia, y dejar el panel cerrado
+    // obligaría a buscar a mano de cuál de todos se estaba hablando.
     const handleChatMatch = useCallback((matched: Place[]) => {
         if (matched.length === 0) {
             return
         }
         setSpotlight({ places: matched })
-        setSelectedId(matched.length === 1 ? matched[0].id : null)
+        setSelectedId(matched[0].id)
     }, [])
 
     // Cambiar de ciudad cierra el detalle: el punto abierto casi nunca está en

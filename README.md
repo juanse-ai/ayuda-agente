@@ -132,8 +132,9 @@ es lo único que conoce a ambos, y también el único que carga datos.
   para quedarse con los que nombra, primero por nombre propio y después por ciudad o recurso; si no
   nombra a ninguno, valen todos los que miró. La cámara se mueve **al terminar el turno**, una sola
   vez: los ids llegan a mitad de camino, pero el agente todavía puede llamar a otra herramienta y
-  cambiar de asunto. Un punto se mira de cerca y abre su panel; varios se encuadran juntos y se
-  resaltan, sin panel — elegir uno afirmaría algo que el agente no dijo. Sin ids resueltos queda
+  cambiar de asunto. Un punto se mira de cerca; varios se encuadran juntos y se resaltan, porque
+  acercarse a uno afirmaría que es _el_ sitio. En los dos casos se abre el panel del primero —el
+  que la respuesta pone por delante—, y el encuadre esquiva el ancho que ocupa. Sin ids resueltos queda
   `findPlaceForText` sobre la respuesta y, en último término, sobre la pregunta; si tampoco hay
   nada, la cámara no se mueve.
 - **Qué se pinta y qué no:** un actor no aparece si no trae coordenadas, si su ubicación es más

@@ -1,6 +1,6 @@
 import { Maximize, Minus, Plus } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef } from 'react'
-import { GRAPH_VIEWBOX } from '@/data/graphView'
+import { GRAPH_VIEWBOX, PANEL_BREAKPOINT, PANEL_WIDTH } from '@/data/graphView'
 import { useGraphViewport } from '@/lib/useGraphViewport'
 import { cn } from '@/lib/utils'
 import type { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent } from 'react'
@@ -56,12 +56,6 @@ const GRID_EXTENT = 8000
  * ellas, que es como no encuadrarlos.
  */
 const CHROME_INSETS: ViewInsets = { top: 96, right: 48, bottom: 184, left: 48 }
-
-/** Ancho del panel lateral, que el spotlight del chat abre a la vez que vuela. */
-const PANEL_WIDTH = 380
-
-/** Por debajo de `sm` el panel ocupa todo el ancho: no queda hueco que respetar. */
-const PANEL_BREAKPOINT = 640
 
 function easeOutCubic(t: number) {
     return 1 - Math.pow(1 - t, 3)
@@ -203,30 +197,31 @@ export function ConnectionsGraph({
 
     const fitAll = useCallback(() => fitTo(Object.values(layout), CHROME_INSETS), [fitTo, layout])
 
+    // El pulso los marca a todos: con varios, el encuadre solo dice "por aquí".
+    const spotlightSet = useMemo(() => new Set(spotlight?.ids ?? []), [spotlight])
+
     // El spotlight es el único encuadre que no pide el usuario con la mano: el agente
     // contestó y la cámara vuela a lo que señaló. Apagarlo (un clic en cualquier sitio) ya
     // no devuelve la cámara a su sitio; deshacer un vuelo que el usuario ya continuó a mano
     // sería quitarle el grafo de debajo.
     //
-    // Con un punto se acerca a él y el panel se abre a la vez, así que se centra en lo que
-    // queda a su izquierda y no debajo del panel. Con varios se encuadran todos: acercarse a
-    // uno de ellos afirmaría que es *el* punto, y no hay panel que esquivar.
-    // El pulso los marca a todos: con varios, el encuadre solo dice "por aquí".
-    const spotlightSet = useMemo(() => new Set(spotlight?.ids ?? []), [spotlight])
-
+    // Con un punto se acerca a él; con varios se encuadran todos, porque acercarse a uno de
+    // ellos afirmaría que es *el* punto. En los dos casos el vuelo abre el panel lateral a
+    // la vez, así que se encuadra en lo que queda a su izquierda y no debajo de él.
     useEffect(() => {
         const points = (spotlight?.ids ?? []).map((id) => layout[id]).filter((point) => point !== undefined)
         if (points.length === 0) {
             return
         }
+        const insets = {
+            ...CHROME_INSETS,
+            right: window.innerWidth >= PANEL_BREAKPOINT ? PANEL_WIDTH : CHROME_INSETS.right
+        }
         if (points.length === 1) {
-            focusOn(points[0], SPOTLIGHT_SCALE, {
-                ...CHROME_INSETS,
-                right: window.innerWidth >= PANEL_BREAKPOINT ? PANEL_WIDTH : CHROME_INSETS.right
-            })
+            focusOn(points[0], SPOTLIGHT_SCALE, insets)
             return
         }
-        fitTo(points, CHROME_INSETS)
+        fitTo(points, insets)
     }, [spotlight, layout, focusOn, fitTo])
 
     /**
@@ -368,7 +363,10 @@ export function ConnectionsGraph({
         () =>
             places.map((place) => {
                 const scatter = scatterById.get(place.id)
-                const isDimmed = connectedIds !== null && !connectedIds.has(place.id)
+                // Lo señalado no se atenúa aunque el panel resalte a otro: el agente acaba
+                // de decir que habla de todos ellos, y apagarlos lo desmentiría.
+                const isDimmed =
+                    connectedIds !== null && !connectedIds.has(place.id) && !spotlightSet.has(place.id)
                 const isHighlighted = place.id === highlightedId
                 const color = place.kind === 'needed' ? 'var(--color-need)' : 'var(--color-offer)'
                 return (
